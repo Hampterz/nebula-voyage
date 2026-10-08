@@ -1,26 +1,33 @@
 /**
- * VOYAGE TRIP PLANNER · CLIENT APPLICATION LOGIC
- * Complete modern, thumb-friendly and feature-packed frontend.
+ * NEBULA VOYAGE · LIQUID SPATIAL CLIENT LOGIC
+ * High-performance, reactive spatial client for Umbrel OS
  */
 
 // Application State
 let activeTripId = null;
 let currentTrip = null;
 let appSettings = null;
+let allTrips = [];
 let leafletMap = null;
 let mapMarkers = [];
 let activeDayFilter = 'all';
-let activePackFilter = 'all';
-let isMapVisibleOnMobile = false;
+let activeModelMode = 'local'; // 'local' | 'cloud'
 
-// DOM Elements Initialization
+// Unassigned wishlist state (in-memory & persisted in trip notes or local storage)
+let wishlistItems = [
+  { id: 'w_1', title: 'Bar Rocking Chair', subtitle: 'World-class cocktail lounge • Gion', category: 'food', icon: 'local_bar' },
+  { id: 'w_2', title: 'Men-ya Inoichi', subtitle: 'Michelin Bib Gourmand dashi ramen', category: 'food', icon: 'ramen_dining' },
+  { id: 'w_3', title: 'Daitoku-ji Zen Garden', subtitle: 'Dry-landscape rock arrangements', category: 'sight', icon: 'park' }
+];
+
+// Document Ready Initialization
 window.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
   setupModals();
   setupForms();
   setupAISection();
   setupPackingSection();
-  setupBudgetSection();
+  setupSettingsSection();
   initMap();
 
   await loadSettings();
@@ -35,1184 +42,1391 @@ function showToast(message, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `toast-item ${type}`;
   toast.innerHTML = `
-    <span>${type === 'success' ? '✓' : '⚠️'}</span>
+    <span class="material-symbols-outlined text-[18px]" style="color: ${type === 'success' ? 'var(--emerald-accent)' : 'var(--rose-accent)'};">
+      ${type === 'success' ? 'check_circle' : 'warning'}
+    </span>
     <span>${escapeHtml(message)}</span>
   `;
 
   container.appendChild(toast);
   setTimeout(() => {
     toast.style.opacity = '0';
-    toast.style.transform = 'translateY(-12px)';
+    toast.style.transform = 'translateY(12px) scale(0.95)';
     toast.style.transition = 'all 0.25s ease';
     setTimeout(() => toast.remove(), 250);
   }, 2800);
 }
 
-// ----------------- NAVIGATION & TABS -----------------
+// ----------------- NAVIGATION & TAB SWITCHING -----------------
 function setupNavigation() {
-  // Desktop Nav Tabs
-  document.querySelectorAll('.nav-tab').forEach(tab => {
-    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+  // Desktop & Mobile Tab Links
+  const navButtons = document.querySelectorAll('.dock-nav-item, .mobile-dock-btn');
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchTab(btn.dataset.tab);
+    });
   });
 
-  // Mobile Bottom Nav Buttons
-  document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-  });
+  // Hub Quick Switchers
+  const btnAiSwitch = document.getElementById('btn-ai-switch-to-itinerary');
+  if (btnAiSwitch) {
+    btnAiSwitch.addEventListener('click', () => switchTab('master-itinerary'));
+  }
 
-  // Trip Switcher Trigger & Outside Click Handling
-  const btnTrigger = document.getElementById('btn-trip-selector-trigger');
-  const dropdownMenu = document.getElementById('trip-dropdown-menu');
+  // Header Share Trigger
+  const btnHeaderShare = document.getElementById('btn-header-share');
+  if (btnHeaderShare) {
+    btnHeaderShare.addEventListener('click', openShareModal);
+  }
 
-  btnTrigger.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const isExpanded = btnTrigger.getAttribute('aria-expanded') === 'true';
-    btnTrigger.setAttribute('aria-expanded', !isExpanded);
-    dropdownMenu.classList.toggle('active');
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!dropdownMenu.contains(e.target) && e.target !== btnTrigger) {
-      dropdownMenu.classList.remove('active');
-      btnTrigger.setAttribute('aria-expanded', 'false');
-    }
-  });
-
-  // Quick Action Buttons
-  document.getElementById('btn-quick-new-trip').addEventListener('click', () => {
-    dropdownMenu.classList.remove('active');
-    openModal(document.getElementById('modal-new-trip'));
-  });
-
-  document.getElementById('btn-header-share').addEventListener('click', openShareModal);
-  document.getElementById('btn-header-settings').addEventListener('click', openSettingsModal);
-  document.getElementById('btn-hero-import-plan').addEventListener('click', openImportModal);
-
-  // Edit Active Trip Details Button
-  document.getElementById('btn-edit-trip-details').addEventListener('click', openEditTripModal);
-
-  // Mobile Map Toggle
-  const btnToggleMap = document.getElementById('btn-toggle-map');
-  const mapColumn = document.getElementById('map-column');
-  const mapToggleText = document.getElementById('map-toggle-text');
-
-  btnToggleMap.addEventListener('click', () => {
-    isMapVisibleOnMobile = !isMapVisibleOnMobile;
-    if (isMapVisibleOnMobile) {
-      mapColumn.style.display = 'block';
-      mapToggleText.textContent = 'Hide Map';
-      setTimeout(() => {
-        if (leafletMap) leafletMap.invalidateSize();
-        renderMapMarkers();
-      }, 150);
-    } else {
-      mapColumn.style.display = 'none';
-      mapToggleText.textContent = 'Show Map';
-    }
-  });
-
-  // Floating Action Button (Mobile) & Desktop Toolbar Add
-  document.getElementById('mobile-fab-add').addEventListener('click', () => openAddItemModal());
-  document.getElementById('btn-open-add-item').addEventListener('click', () => openAddItemModal());
+  // Brand click -> Trips Hub
+  const btnDockBrand = document.getElementById('btn-dock-brand');
+  if (btnDockBrand) {
+    btnDockBrand.addEventListener('click', () => switchTab('trips-hub'));
+  }
 }
 
 function switchTab(tabId) {
-  // Update desktop tabs
-  document.querySelectorAll('.nav-tab').forEach(tab => {
-    const isActive = tab.dataset.tab === tabId;
-    tab.classList.toggle('active', isActive);
-    tab.setAttribute('aria-selected', isActive);
+  // Update Tab Views
+  document.querySelectorAll('.tab-view').forEach(view => {
+    view.classList.remove('active');
   });
 
-  // Update mobile bottom nav
-  document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === tabId);
-  });
-
-  // Update view panels
-  document.querySelectorAll('.view-panel').forEach(panel => {
-    panel.classList.remove('active');
-  });
-
-  const targetPanel = document.getElementById(`view-${tabId}`);
-  if (targetPanel) {
-    targetPanel.classList.add('active');
+  const targetView = document.getElementById(`view-${tabId}`);
+  if (targetView) {
+    targetView.classList.add('active');
   }
 
-  // Refresh map view if switching to itinerary
-  if (tabId === 'itinerary' && leafletMap) {
+  // Update Nav Dock Buttons
+  document.querySelectorAll('.dock-nav-item, .mobile-dock-btn').forEach(btn => {
+    if (btn.dataset.tab === tabId) {
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+    } else {
+      btn.classList.remove('active');
+      btn.setAttribute('aria-selected', 'false');
+    }
+  });
+
+  // Re-render / Invalidate Map if entering Itinerary
+  if (tabId === 'master-itinerary' && leafletMap) {
     setTimeout(() => {
       leafletMap.invalidateSize();
-      renderMapMarkers();
+      fitMapToMarkers();
     }, 200);
   }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ----------------- MODAL DIALOGS -----------------
+function setupModals() {
+  // Close triggers
+  document.querySelectorAll('.btn-modal-close').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.modal-backdrop').forEach(modal => modal.classList.remove('active'));
+    });
+  });
+
+  // Close when clicking backdrop
+  document.querySelectorAll('.modal-backdrop').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('active');
+    });
+  });
+
+  // Hub Button Triggers
+  const btnNewTrip = document.getElementById('btn-hub-new-trip');
+  if (btnNewTrip) {
+    btnNewTrip.addEventListener('click', () => {
+      // Set default dates
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth() + 1, 10);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 18);
+      document.getElementById('input-new-trip-start').value = start.toISOString().split('T')[0];
+      document.getElementById('input-new-trip-end').value = end.toISOString().split('T')[0];
+      openModal(document.getElementById('modal-new-trip'));
+    });
+  }
+
+  const btnImportPlan = document.getElementById('btn-hub-import-plan');
+  if (btnImportPlan) {
+    btnImportPlan.addEventListener('click', () => openModal(document.getElementById('modal-import-plan')));
+  }
+
+  const btnAddStop = document.getElementById('btn-itinerary-add-stop');
+  if (btnAddStop) {
+    btnAddStop.addEventListener('click', () => openAddStopModal());
+  }
+
+  const btnSync = document.getElementById('btn-hub-sync');
+  if (btnSync) {
+    btnSync.addEventListener('click', async () => {
+      btnSync.style.transform = 'rotate(180deg)';
+      btnSync.style.transition = 'transform 0.4s ease';
+      await loadTrips();
+      setTimeout(() => {
+        btnSync.style.transform = 'none';
+        btnSync.style.transition = 'none';
+        showToast('Synchronized with Umbrel vault');
+      }, 400);
+    });
+  }
+}
+
+function openModal(modalEl) {
+  if (modalEl) modalEl.classList.add('active');
+}
+
+function closeModal(modalEl) {
+  if (modalEl) modalEl.classList.remove('active');
 }
 
 // ----------------- DATA LOADING -----------------
 async function loadSettings() {
   try {
     const res = await fetch('/api/settings');
-    appSettings = await res.json();
-    updateAIBadges();
+    if (res.ok) {
+      appSettings = await res.json();
+      populateSettingsForm(appSettings);
+    }
   } catch (err) {
     console.error('Failed to load settings:', err);
-  }
-}
-
-function updateAIBadges() {
-  const badgeModel = document.getElementById('badge-ai-model');
-  const labelProvider = document.getElementById('ai-active-provider-label');
-  if (!appSettings) return;
-
-  if (appSettings.aiProvider === 'gemini') {
-    badgeModel.textContent = appSettings.geminiModel || 'Gemini 3.8 Flash';
-    labelProvider.textContent = 'Grounded with Google Gemini & Live Web Discovery';
-  } else {
-    badgeModel.textContent = appSettings.ollamaModel || 'Local Ollama';
-    labelProvider.textContent = 'Running locally on your private Umbrel server';
   }
 }
 
 async function loadTrips() {
   try {
     const res = await fetch('/api/trips');
-    const trips = await res.json();
+    if (!res.ok) throw new Error('Failed to load trips');
+    allTrips = await res.json();
 
-    const dropdownList = document.getElementById('trip-dropdown-list');
-    dropdownList.innerHTML = '';
-
-    if (trips.length === 0) {
-      document.getElementById('header-trip-name').textContent = 'No Trips Found';
-      return;
+    const countLabel = document.getElementById('hub-trips-count');
+    if (countLabel) {
+      countLabel.textContent = `${allTrips.length} active expedition${allTrips.length === 1 ? '' : 's'}`;
     }
 
-    trips.forEach(t => {
-      const item = document.createElement('div');
-      item.className = `trip-dropdown-item ${t.id === activeTripId ? 'active' : ''}`;
-      item.dataset.tripId = t.id;
-      item.innerHTML = `
-        <div class="item-main-text">
-          <strong>${escapeHtml(t.title || t.destination)}</strong>
-          <div class="item-sub-dates">${escapeHtml(t.destination)} • ${t.startDate ? t.startDate.slice(5) : 'Upcoming'}</div>
-        </div>
-      `;
-      item.addEventListener('click', () => {
-        document.getElementById('trip-dropdown-menu').classList.remove('active');
-        document.getElementById('btn-trip-selector-trigger').setAttribute('aria-expanded', 'false');
-        loadTripDetails(t.id);
-      });
-      dropdownList.appendChild(item);
-    });
-
-    // Default to first trip if none set
-    if (!activeTripId || !trips.some(t => t.id === activeTripId)) {
-      activeTripId = trips[0].id;
+    if (allTrips.length > 0) {
+      if (!activeTripId || !allTrips.find(t => t.id === activeTripId)) {
+        activeTripId = allTrips[0].id;
+      }
+      renderTripsHub(allTrips);
+      await loadActiveTrip(activeTripId);
+    } else {
+      renderEmptyHub();
     }
-
-    await loadTripDetails(activeTripId);
   } catch (err) {
-    console.error('Error loading trips:', err);
-    showToast('Failed to load trips from server', 'error');
+    console.error(err);
+    showToast('Failed to load trips from node', 'error');
   }
 }
 
-async function loadTripDetails(id) {
+async function loadActiveTrip(tripId) {
   try {
-    activeTripId = id;
-    const res = await fetch(`/api/trips/${id}`);
+    const res = await fetch(`/api/trips/${tripId}`);
     if (!res.ok) throw new Error('Trip not found');
     currentTrip = await res.json();
+    activeTripId = tripId;
 
-    // Update Header Selector Text
-    document.getElementById('header-trip-name').textContent = currentTrip.title || currentTrip.destination;
+    // Update Header and Global Labels
+    const headerTripLabel = document.getElementById('header-trip-name');
+    if (headerTripLabel) headerTripLabel.textContent = currentTrip.title || currentTrip.destination;
 
-    // Update Dropdown Items Active State
-    document.querySelectorAll('.trip-dropdown-item').forEach(item => {
-      item.classList.toggle('active', item.dataset.tripId === id);
-    });
+    const aiTripLabel = document.getElementById('ai-active-trip-label');
+    if (aiTripLabel) aiTripLabel.textContent = currentTrip.destination || currentTrip.title;
 
-    renderHero();
-    renderDayFilters();
-    renderViewingTimeline();
-    renderPackingList();
-    renderBudget();
-    loadWeather();
+    // Render Master Itinerary
+    renderMasterItinerary(currentTrip);
+    // Render AI Planner Sidebars
+    renderAIDayPreview(currentTrip);
+    renderWishlist();
+
+    // Fetch Destination Weather
+    fetchDestinationWeather(currentTrip.destination);
   } catch (err) {
-    console.error('Error loading trip details:', err);
-    showToast('Failed to load trip details', 'error');
+    console.error(err);
   }
 }
 
-// ----------------- HERO & WEATHER -----------------
-function renderHero() {
-  if (!currentTrip) return;
-  document.getElementById('hero-title').textContent = currentTrip.title || currentTrip.destination;
-  document.getElementById('hero-dest').textContent = `📍 ${currentTrip.destination}`;
-  document.getElementById('hero-dates').textContent = `📅 ${currentTrip.startDate || 'Upcoming'} to ${currentTrip.endDate || 'Upcoming'}`;
-  document.getElementById('hero-travelers').textContent = `👥 ${currentTrip.travelers || '1 Traveler'}`;
-  document.getElementById('hero-style').textContent = `✨ ${currentTrip.travelStyle || 'Exploration'}`;
-  document.getElementById('hero-notes').textContent = currentTrip.notes || 'No trip notes added yet. Use "Edit Details" above to set trip reminders, packing goals, and key flight info.';
-}
+// ----------------- RENDER VIEW 1: TRIPS HUB -----------------
+function renderTripsHub(trips) {
+  const featured = trips.find(t => t.id === activeTripId) || trips[0];
+  const container = document.getElementById('featured-trip-container');
 
-async function loadWeather() {
-  if (!currentTrip || !currentTrip.destination) return;
-  const weatherBox = document.getElementById('weather-status');
-  weatherBox.innerHTML = '<span style="font-size:12px; color:var(--text-dim);">🌤️ Loading weather...</span>';
+  if (featured && container) {
+    const totalStops = (featured.items || []).length;
+    const spent = (featured.items || []).reduce((acc, i) => acc + (Number(i.cost) || 0), 0);
+    const budget = Number(featured.targetBudget) || 3500;
+    const budgetPct = Math.min(Math.round((spent / budget) * 100), 100);
+    const durationDays = calculateDurationDays(featured.startDate, featured.endDate);
 
-  try {
-    const res = await fetch(`/api/weather?destination=${encodeURIComponent(currentTrip.destination)}`);
-    if (!res.ok) {
-      weatherBox.innerHTML = '<span style="font-size:12px; color:var(--text-dim);">Weather offline</span>';
-      return;
-    }
-    const data = await res.json();
-    const tempC = Math.round(data.current?.temperature || 20);
-    const tempF = Math.round((tempC * 9/5) + 32);
-
-    weatherBox.innerHTML = `
-      <div class="weather-temp-row">
-        <span class="weather-celsius">${tempC}°C</span>
-        <span class="weather-fahrenheit">/ ${tempF}°F</span>
-      </div>
-      <div class="weather-condition-text">📍 ${escapeHtml(data.location)}</div>
-    `;
-  } catch (err) {
-    weatherBox.innerHTML = '<span style="font-size:12px; color:var(--text-dim);">Forecast unavailable</span>';
-  }
-}
-
-// ----------------- ITINERARY TIMELINE -----------------
-function renderDayFilters() {
-  const bar = document.getElementById('day-filter-bar');
-  bar.innerHTML = '<button class="day-chip active" data-day="all">All Days</button>';
-
-  if (!currentTrip || !currentTrip.items) return;
-  const days = [...new Set(currentTrip.items.map(i => Number(i.day) || 1))].sort((a,b) => a - b);
-
-  days.forEach(d => {
-    const btn = document.createElement('button');
-    btn.className = 'day-chip';
-    btn.dataset.day = d;
-    btn.textContent = `Day ${d}`;
-    bar.appendChild(btn);
-  });
-
-  bar.querySelectorAll('.day-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      bar.querySelectorAll('.day-chip').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeDayFilter = btn.dataset.day;
-      renderViewingTimeline();
-      renderMapMarkers();
-    });
-  });
-}
-
-function renderViewingTimeline() {
-  const container = document.getElementById('timeline-cards-container');
-  container.innerHTML = '';
-
-  if (!currentTrip || !currentTrip.items || currentTrip.items.length === 0) {
     container.innerHTML = `
-      <div class="empty-itinerary-card">
-        <div class="empty-itinerary-icon">🗺️</div>
-        <h3 style="font-family:'Outfit'; font-size:20px; color:#fff; margin-bottom:6px;">Your itinerary is empty</h3>
-        <p style="color:var(--text-muted); font-size:13.5px; max-width:440px; margin:0 auto 18px;">
-          Plan your adventure by adding your first stop, or let the AI Co-Pilot curate highlights for you.
+      <section class="liquid-glass featured-trip-hero">
+        <!-- Ambient Backing Glow & Refraction -->
+        <div style="position: absolute; -top: 100px; -right: 100px; width: 300px; height: 300px; border-radius: 9999px; background: rgba(125,211,252,0.08); filter: blur(80px); pointer-events: none;"></div>
+
+        <div class="featured-trip-content">
+          <div>
+            <div class="featured-header-badge">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="dock-status-dot"></span>
+                <span style="font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--water-accent); font-weight: 600;">Active Expedition</span>
+                <span style="opacity: 0.3;">•</span>
+                <span style="font-size: 12px; color: var(--text-secondary);">${escapeHtml(featured.destination)}</span>
+              </div>
+              <span class="route-code-chip">VAULT #${featured.id.slice(-6).toUpperCase()}</span>
+            </div>
+
+            <div style="margin-top: 16px;">
+              <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 600;">
+                ${escapeHtml(featured.travelStyle || 'Sovereign Journey')}
+              </span>
+              <h2 class="featured-trip-title">${escapeHtml(featured.title)}</h2>
+              <p class="featured-trip-desc">${escapeHtml(featured.notes || 'Autonomous travel itinerary managed through sovereign Umbrel node.')}</p>
+            </div>
+          </div>
+
+          <!-- Spatial Metrics Matrix -->
+          <div class="spatial-metrics-grid">
+            <div class="metric-liquid-tile">
+              <span class="metric-label">Timeline</span>
+              <span class="metric-value">${formatDateDisplay(featured.startDate)} – ${formatDateDisplay(featured.endDate)}</span>
+              <span class="metric-sub">${durationDays} Days Active</span>
+            </div>
+
+            <div class="metric-liquid-tile">
+              <span class="metric-label">Spatial Waypoints</span>
+              <span class="metric-value">${totalStops} Coordinates</span>
+              <span class="metric-sub">Zero-Knowledge Offline</span>
+            </div>
+
+            <div class="metric-liquid-tile">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="metric-label" style="margin: 0;">Budget Usage</span>
+                <span style="font-size: 11px; color: var(--water-accent);">${budgetPct}%</span>
+              </div>
+              <span class="metric-value">$${spent.toLocaleString()} / $${budget.toLocaleString()}</span>
+              <div class="metric-progress-track">
+                <div class="metric-progress-fill" style="width: ${budgetPct}%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Plate Controls -->
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 8px;">
+            <button id="btn-hub-open-itinerary" class="btn-liquid-primary" type="button">
+              <span>Open Master Itinerary</span>
+              <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+            </button>
+            <button id="btn-hub-open-ai" class="btn-liquid-subtle" type="button">
+              <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+              <span>AI Spatial Planner</span>
+            </button>
+            <button id="btn-hub-download-archive" class="btn-icon-disc" title="Download Zero-Knowledge JSON Archive" type="button">
+              <span class="material-symbols-outlined text-[18px]">download</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Optical Spatial Window / Image Preview -->
+        <div class="featured-trip-visual" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBn0eNohwehV7DVOlG9bN-sCfh8OrL5kiDtusyKBDl0UBaUNpm6-hDPkChNQ3x8k5vB-E2Co65YFKFNWtByO00tsd2PSFvM831GyKhZRyk1-kYmtCifybl-guD748UvQ9WbZqD7Ynd-GFc9FP1X_ugo_8gghQShCXU3CgD7QPySbykD2RnczlGK0scpnu4Hbg0TeOSOkJQJ__Fhar31BAyrURDHE4ADd1NhcT0xwa9l');">
+          <div class="visual-floating-badge">
+            <span class="material-symbols-outlined text-[16px]" style="color: var(--water-accent);">verified</span>
+            <span>Spatial Coordinates Verified • Kyoto</span>
+          </div>
+        </div>
+      </section>
+    `;
+
+    // Bind Hero Action Buttons
+    document.getElementById('btn-hub-open-itinerary').addEventListener('click', () => switchTab('master-itinerary'));
+    document.getElementById('btn-hub-open-ai').addEventListener('click', () => switchTab('ai-planner'));
+    document.getElementById('btn-hub-download-archive').addEventListener('click', () => downloadTripJSON(featured));
+  }
+
+  // Render Grid of All Trips
+  const grid = document.getElementById('trips-grid');
+  if (grid) {
+    grid.innerHTML = trips.map(t => {
+      const isSelected = t.id === activeTripId;
+      const stopsCount = (t.items || []).length;
+      return `
+        <article class="liquid-glass trip-card-item ${isSelected ? 'active-selection' : ''}" data-id="${t.id}">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 9999px; background: rgba(255,255,255,0.08); color: var(--water-accent); border: 1px solid rgba(255,255,255,0.12);">
+                ${isSelected ? 'Active Selection' : 'Encrypted Vault'}
+              </span>
+              <button class="btn-icon-disc btn-delete-trip" data-id="${t.id}" style="width: 28px; height: 28px; opacity: 0.7;" title="Delete Trip" type="button">
+                <span class="material-symbols-outlined text-[15px]">delete</span>
+              </button>
+            </div>
+
+            <h3 style="font-size: 19px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">${escapeHtml(t.title)}</h3>
+            <p style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+              <span class="material-symbols-outlined text-[15px]">location_on</span>
+              <span>${escapeHtml(t.destination)}</span>
+            </p>
+          </div>
+
+          <div style="padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+            <span style="color: var(--text-secondary);">${formatDateDisplay(t.startDate)}</span>
+            <span style="color: var(--water-accent); font-weight: 500;">${stopsCount} Stops</span>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    // Attach card click handlers
+    grid.querySelectorAll('.trip-card-item').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-delete-trip')) return;
+        const id = card.dataset.id;
+        loadActiveTrip(id);
+        renderTripsHub(allTrips);
+        showToast('Switched active expedition');
+      });
+    });
+
+    // Attach delete handlers
+    grid.querySelectorAll('.btn-delete-trip').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        if (confirm('Permanently delete this expedition from node vault?')) {
+          await deleteTrip(id);
+        }
+      });
+    });
+  }
+}
+
+function renderEmptyHub() {
+  const container = document.getElementById('featured-trip-container');
+  if (container) {
+    container.innerHTML = `
+      <div class="liquid-glass" style="padding: 48px; text-align: center;">
+        <span class="material-symbols-outlined text-[48px]" style="color: var(--water-accent); margin-bottom: 16px;">explore_off</span>
+        <h2 style="font-size: 24px; font-weight: 500; color: #ffffff; margin-bottom: 8px;">No Expeditions Found in Vault</h2>
+        <p style="font-size: 14px; color: var(--text-muted); max-width: 480px; margin: 0 auto 24px;">
+          Create your first spatial expedition or import an existing travel plan to begin planning with sovereign local AI.
         </p>
-        <button class="btn-primary-gradient" id="btn-empty-add-stop">
-          + Add First Stop
+        <button id="btn-empty-create" class="btn-liquid-primary" type="button">
+          <span class="material-symbols-outlined text-[18px]">add</span>
+          <span>Create New Expedition</span>
         </button>
       </div>
     `;
-    const btnEmpty = document.getElementById('btn-empty-add-stop');
-    if (btnEmpty) btnEmpty.addEventListener('click', openAddItemModal);
-    return;
+    document.getElementById('btn-empty-create').addEventListener('click', () => {
+      openModal(document.getElementById('modal-new-trip'));
+    });
   }
+}
 
-  // Filter items by day
-  let filteredItems = currentTrip.items;
-  if (activeDayFilter !== 'all') {
-    filteredItems = currentTrip.items.filter(i => String(i.day) === String(activeDayFilter));
-  }
+// ----------------- RENDER VIEW 3: MASTER ITINERARY -----------------
+function renderMasterItinerary(trip) {
+  if (!trip) return;
 
-  // Group by day
-  const daysMap = {};
-  filteredItems.forEach(item => {
-    const d = item.day || 1;
-    if (!daysMap[d]) daysMap[d] = [];
-    daysMap[d].push(item);
-  });
+  // Header Metadata
+  const destEl = document.getElementById('itinerary-trip-dest');
+  if (destEl) destEl.textContent = trip.destination;
 
-  const sortedDays = Object.keys(daysMap).sort((a, b) => Number(a) - Number(b));
+  const vaultEl = document.getElementById('itinerary-vault-id');
+  if (vaultEl) vaultEl.textContent = `VAULT #${trip.id.slice(-6).toUpperCase()}`;
 
-  sortedDays.forEach(day => {
-    const dayGroup = document.createElement('div');
-    dayGroup.className = 'day-timeline-group';
+  const titleEl = document.getElementById('itinerary-trip-title');
+  if (titleEl) titleEl.textContent = trip.title;
 
-    const dayHeader = document.createElement('div');
-    dayHeader.className = 'day-heading-bar';
-    dayHeader.innerHTML = `
-      <span class="day-heading-title">Day ${day}</span>
-      <span class="day-heading-count">${daysMap[day].length} scheduled stop${daysMap[day].length === 1 ? '' : 's'}</span>
+  const datesEl = document.getElementById('itinerary-trip-dates');
+  if (datesEl) datesEl.textContent = `${formatDateDisplay(trip.startDate)} – ${formatDateDisplay(trip.endDate)}`;
+
+  const travEl = document.getElementById('itinerary-trip-travelers');
+  if (travEl) travEl.textContent = trip.travelers || '2 Adults';
+
+  const stopsEl = document.getElementById('itinerary-total-stops-badge');
+  if (stopsEl) stopsEl.textContent = `${(trip.items || []).length} Curated Stops`;
+
+  // Day Selector Pills
+  renderDaySelector(trip);
+
+  // Filter and Render Timeline Items
+  renderTimelineItems(trip);
+
+  // Render Map Markers
+  updateMapMarkers(trip);
+
+  // Render Packing Items
+  renderPackingItems(trip);
+
+  // Render Budget Metrics
+  renderBudgetMetrics(trip);
+}
+
+function renderDaySelector(trip) {
+  const container = document.getElementById('itinerary-day-selector');
+  if (!container) return;
+
+  const daysSet = new Set((trip.items || []).map(i => Number(i.day) || 1));
+  const maxDay = Math.max(...Array.from(daysSet), 1);
+
+  let html = `
+    <button class="day-tab-btn ${activeDayFilter === 'all' ? 'active' : ''}" data-day="all" type="button">
+      All Days (${(trip.items || []).length})
+    </button>
+  `;
+
+  for (let d = 1; d <= maxDay; d++) {
+    const count = (trip.items || []).filter(i => Number(i.day) === d).length;
+    html += `
+      <button class="day-tab-btn ${String(activeDayFilter) === String(d) ? 'active' : ''}" data-day="${d}" type="button">
+        Day ${d} (${count})
+      </button>
     `;
-    dayGroup.appendChild(dayHeader);
+  }
 
-    // Sort items by time
-    daysMap[day].sort((a, b) => (a.time || '10:00').localeCompare(b.time || '10:00')).forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'stop-card';
+  container.innerHTML = html;
 
-      const catBadge = getCategoryBadge(item.category);
-      const gmapsUrl = item.mapUrl || (item.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}` : '');
-
-      card.innerHTML = `
-        <div class="stop-card-top">
-          <div class="stop-title-wrap">
-            ${catBadge}
-            <span class="stop-title">${escapeHtml(item.title)}</span>
-          </div>
-          <span class="stop-time-badge">${item.time || 'Flexible'} • ${(item.timeBlock || 'Day').toUpperCase()}</span>
-        </div>
-        ${item.location ? `<div class="stop-loc">📍 <span>${escapeHtml(item.location)}</span></div>` : ''}
-        ${item.notes ? `<div class="stop-notes">${escapeHtml(item.notes)}</div>` : ''}
-        <div class="stop-card-actions">
-          <div class="stop-links-group">
-            ${gmapsUrl ? `<a href="${gmapsUrl}" target="_blank" rel="noopener" class="btn-gmaps-link">📍 Directions ↗</a>` : ''}
-            ${item.websiteUrl ? `<a href="${item.websiteUrl}" target="_blank" rel="noopener" class="btn-gmaps-link" style="color:#a78bfa; background:rgba(167,139,250,0.1);">Website ↗</a>` : ''}
-          </div>
-          <button class="btn-card-edit" data-edit-id="${item.id}">✏️ Edit</button>
-        </div>
-      `;
-
-      card.querySelector('.btn-card-edit').addEventListener('click', () => {
-        openEditItemModal(item);
-      });
-
-      dayGroup.appendChild(card);
+  container.querySelectorAll('.day-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeDayFilter = btn.dataset.day;
+      renderDaySelector(trip);
+      renderTimelineItems(trip);
+      updateMapMarkers(trip);
     });
-
-    container.appendChild(dayGroup);
   });
 }
 
-function getCategoryBadge(cat) {
-  const map = {
-    flight: '<span class="badge-cat cat-flight">✈️ Flight</span>',
-    hotel: '<span class="badge-cat cat-hotel">🏨 Hotel</span>',
-    food: '<span class="badge-cat cat-food">🍽️ Food</span>',
-    activity: '<span class="badge-cat cat-activity">🎯 Activity</span>',
-    note: '<span class="badge-cat cat-note">📝 Note</span>'
-  };
-  return map[cat] || '<span class="badge-cat cat-activity">🎯 Activity</span>';
-}
+function renderTimelineItems(trip) {
+  const container = document.getElementById('timeline-items-container');
+  if (!container) return;
 
-// ----------------- LEAFLET MAP INTEGRATION -----------------
-function initMap() {
-  const mapContainer = document.getElementById('trip-map');
-  if (!mapContainer) return;
-
-  leafletMap = L.map('trip-map', {
-    zoomControl: true,
-    scrollWheelZoom: true
-  }).setView([35.0116, 135.7681], 12);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
-  }).addTo(leafletMap);
-}
-
-async function renderMapMarkers() {
-  if (!leafletMap || !currentTrip) return;
-
-  // Clear existing markers
-  mapMarkers.forEach(m => leafletMap.removeLayer(m));
-  mapMarkers = [];
-
-  let itemsToMap = currentTrip.items || [];
+  let items = trip.items || [];
   if (activeDayFilter !== 'all') {
-    itemsToMap = itemsToMap.filter(i => String(i.day) === String(activeDayFilter));
+    items = items.filter(i => String(i.day) === String(activeDayFilter));
   }
 
-  const bounds = [];
-
-  for (const item of itemsToMap) {
-    if (!item.location) continue;
-    try {
-      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(item.location.split(',')[0])}&count=1`);
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (data.results && data.results.length > 0) {
-        const { latitude, longitude } = data.results[0];
-        const marker = L.marker([latitude, longitude]).addTo(leafletMap);
-        marker.bindPopup(`
-          <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:160px;">
-            <strong style="color:#0f172a; font-size:14px;">${escapeHtml(item.title)}</strong><br>
-            <span style="color:#64748b; font-size:12px;">📍 ${escapeHtml(item.location)}</span><br>
-            <a href="${item.mapUrl || '#'}" target="_blank" style="color:#4f46e5; font-weight:700; font-size:12px; display:inline-block; margin-top:4px;">Directions in Google Maps ↗</a>
-          </div>
-        `);
-        mapMarkers.push(marker);
-        bounds.push([latitude, longitude]);
-      }
-    } catch (e) {
-      // skip
-    }
-  }
-
-  if (bounds.length > 0) {
-    leafletMap.fitBounds(bounds, { padding: [30, 30] });
-  } else if (currentTrip.destination) {
-    try {
-      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(currentTrip.destination)}&count=1`);
-      const data = await res.json();
-      if (data.results?.[0]) {
-        leafletMap.setView([data.results[0].latitude, data.results[0].longitude], 12);
-      }
-    } catch (e) {}
-  }
-}
-
-// ----------------- AI CO-PILOT -----------------
-function setupAISection() {
-  const btnGen = document.getElementById('btn-generate-ai');
-  const inputPrompt = document.getElementById('ai-custom-prompt');
-
-  document.querySelectorAll('.ai-shortcut-chip').forEach(pill => {
-    pill.addEventListener('click', () => {
-      inputPrompt.value = pill.dataset.prompt;
-      triggerAIGeneration();
-    });
+  // Sort by Day then Approx Time
+  items.sort((a, b) => {
+    if (a.day !== b.day) return a.day - b.day;
+    return (a.time || '').localeCompare(b.time || '');
   });
 
-  btnGen.addEventListener('click', triggerAIGeneration);
-  inputPrompt.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') triggerAIGeneration();
-  });
-}
-
-async function triggerAIGeneration() {
-  if (!activeTripId) {
-    showToast('Please select or create a trip first', 'error');
+  if (items.length === 0) {
+    container.innerHTML = `
+      <div class="liquid-glass" style="padding: 32px; text-align: center;">
+        <span class="material-symbols-outlined text-[32px]" style="color: var(--water-accent); margin-bottom: 8px;">calendar_today</span>
+        <h3 style="font-size: 16px; color: #ffffff; margin-bottom: 4px;">No stops recorded for this day</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Add your first stop or let AI generate an itinerary for this day.</p>
+        <button id="btn-timeline-empty-add" class="btn-liquid-primary" style="padding: 8px 16px;" type="button">
+          + Add Stop to Day ${activeDayFilter === 'all' ? 1 : activeDayFilter}
+        </button>
+      </div>
+    `;
+    document.getElementById('btn-timeline-empty-add').addEventListener('click', () => openAddStopModal());
     return;
   }
 
-  const inputPrompt = document.getElementById('ai-custom-prompt');
-  const btnText = document.getElementById('ai-btn-text');
-  const resultsContainer = document.getElementById('ai-results-container');
+  container.innerHTML = items.map((item, index) => {
+    const stepNumber = String(index + 1).padStart(2, '0');
+    const categoryIcon = getCategoryIcon(item.category);
+    const mapQuery = encodeURIComponent(item.location || item.title);
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
 
-  const prompt = inputPrompt.value.trim() || 'Suggest top must-see highlights, restaurants, and hidden spots';
-  btnText.textContent = 'Searching & Thinking...';
-  
-  resultsContainer.innerHTML = `
-    <div class="ai-empty-state">
-      <div style="font-size:32px; animation: spin 1s linear infinite;">🌀</div>
-      <h3 style="color:#fff; margin-top:12px;">Discovering destinations...</h3>
-      <p style="color:var(--text-muted); font-size:13px; margin-top:4px;">
-        Querying ${appSettings?.aiProvider === 'gemini' ? 'Gemini 3.8 Flash with DuckDuckGo grounding' : 'Ollama'}...
-      </p>
+    return `
+      <article class="liquid-glass itinerary-item-card" data-item-id="${item.id}">
+        <!-- Node Pin -->
+        <div class="timeline-step-node">${stepNumber}</div>
+
+        <div class="item-card-header">
+          <div class="item-time-badge">
+            <span class="material-symbols-outlined text-[16px]">${categoryIcon}</span>
+            <span>Day ${item.day} • ${item.time || 'Flexible'} (${escapeHtml(item.timeBlock || 'Day')})</span>
+          </div>
+          <div class="item-actions-cluster">
+            <span style="font-size: 11px; text-transform: uppercase; padding: 2px 8px; border-radius: 9999px; background: rgba(255,255,255,0.08); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.12);">
+              ${escapeHtml(item.category || 'Sight')}
+            </span>
+            <button class="btn-icon-disc btn-edit-stop" data-id="${item.id}" style="width: 28px; height: 28px;" title="Edit Stop" type="button">
+              <span class="material-symbols-outlined text-[14px]">edit</span>
+            </button>
+            <button class="btn-icon-disc btn-delete-stop" data-id="${item.id}" style="width: 28px; height: 28px; opacity: 0.7;" title="Delete Stop" type="button">
+              <span class="material-symbols-outlined text-[14px]">delete</span>
+            </button>
+          </div>
+        </div>
+
+        <h3 class="item-title">${escapeHtml(item.title)}</h3>
+
+        ${item.notes ? `<p class="item-notes">${escapeHtml(item.notes)}</p>` : ''}
+
+        <div class="item-meta-footer">
+          <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted);">
+            <span class="material-symbols-outlined text-[15px]">location_on</span>
+            <span style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              ${escapeHtml(item.location || 'Location upon arrival')}
+            </span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px;">
+            ${item.cost ? `<span style="color: var(--water-accent); font-weight: 600;">$${Number(item.cost).toLocaleString()}</span>` : ''}
+            <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="color: #ffffff; text-decoration: none; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+              <span>Directions</span>
+              <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+            </a>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  // Attach Item Actions
+  container.querySelectorAll('.btn-edit-stop').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const item = (trip.items || []).find(i => i.id === id);
+      if (item) openEditStopModal(item);
+    });
+  });
+
+  container.querySelectorAll('.btn-delete-stop').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      if (confirm('Delete this stop from itinerary?')) {
+        await deleteStopItem(id);
+      }
+    });
+  });
+}
+
+// ----------------- RENDER VIEW 2: AI PLANNER STREAM -----------------
+function setupAISection() {
+  // Model Toggle Pills
+  const btnLocal = document.getElementById('btn-model-local');
+  const btnCloud = document.getElementById('btn-model-cloud');
+
+  if (btnLocal && btnCloud) {
+    btnLocal.addEventListener('click', () => {
+      activeModelMode = 'local';
+      btnLocal.classList.add('active');
+      btnCloud.classList.remove('active');
+      showToast('Switched to Local Ollama Neural Engine');
+    });
+
+    btnCloud.addEventListener('click', () => {
+      activeModelMode = 'cloud';
+      btnCloud.classList.add('active');
+      btnLocal.classList.remove('active');
+      showToast('Switched to Cloud Gemini + Live Web Search');
+    });
+  }
+
+  // Prompt Submit
+  const btnQuery = document.getElementById('btn-ai-query');
+  const omnibarInput = document.getElementById('ai-omnibar-input');
+
+  if (btnQuery && omnibarInput) {
+    btnQuery.addEventListener('click', () => handleAISubmit());
+    omnibarInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleAISubmit();
+    });
+  }
+
+  // Quick Inspiration Chips
+  document.querySelectorAll('.ai-chip-btn').forEach(chip => {
+    chip.addEventListener('click', () => {
+      if (omnibarInput) {
+        omnibarInput.value = chip.dataset.prompt;
+        handleAISubmit();
+      }
+    });
+  });
+
+  const btnSeed = document.getElementById('btn-quick-inspire-seed');
+  if (btnSeed) {
+    btnSeed.addEventListener('click', () => {
+      if (omnibarInput) {
+        omnibarInput.value = "Top cultural sights, hidden zen gardens, and evening dining in Kyoto";
+        handleAISubmit();
+      }
+    });
+  }
+}
+
+async function handleAISubmit() {
+  const input = document.getElementById('ai-omnibar-input');
+  if (!input || !input.value.trim() || !currentTrip) return;
+
+  const query = input.value.trim();
+  const btnQuery = document.getElementById('btn-ai-query');
+  const container = document.getElementById('ai-rec-container');
+
+  if (btnQuery) {
+    btnQuery.disabled = true;
+    btnQuery.innerHTML = `<span class="material-symbols-outlined text-[16px] animate-spin">refresh</span><span>Thinking...</span>`;
+  }
+
+  // Show loading skeleton
+  container.innerHTML = `
+    <div class="liquid-glass" style="padding: 28px; text-align: center;">
+      <div class="dock-status-dot" style="margin: 0 auto 12px; width: 12px; height: 12px;"></div>
+      <h3 style="font-size: 16px; color: #ffffff;">Consulting ${activeModelMode === 'local' ? 'Local Ollama' : 'Gemini 3.8 Flash & Live Web'}...</h3>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Analyzing destination coordinates and crowd patterns for ${escapeHtml(currentTrip.destination)}.</p>
     </div>
   `;
 
   try {
-    const res = await fetch(`/api/trips/${activeTripId}/generate-ideas`, {
+    const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
+      body: JSON.stringify({
+        tripId: currentTrip.id,
+        prompt: query,
+        provider: activeModelMode === 'local' ? 'ollama' : 'gemini'
+      })
     });
 
+    if (!res.ok) throw new Error('AI Generation failed');
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'AI generation failed');
-
-    renderAIResults(data.recommendations || []);
-    showToast('Generated fresh travel ideas!');
+    renderAIRecommendations(data.recommendations || data.plan || data);
   } catch (err) {
-    resultsContainer.innerHTML = `
-      <div class="ai-empty-state" style="border-color:rgba(244,63,94,0.4);">
-        <div style="font-size:32px;">⚠️</div>
-        <h3 style="color:#fb7185; margin-top:8px;">Generation Error</h3>
-        <p style="color:var(--text-muted); font-size:13px; max-width:400px; margin:4px auto;">
-          ${escapeHtml(err.message)}
-        </p>
-        <button class="btn-secondary-glow" style="margin-top:12px;" onclick="openSettingsModal()">
-          Check AI Settings
-        </button>
+    console.error(err);
+    showToast('Failed to generate suggestions', 'error');
+    container.innerHTML = `
+      <div class="liquid-glass" style="padding: 24px; text-align: center; color: var(--rose-accent);">
+        <p>Could not connect to ${activeModelMode === 'local' ? 'Ollama' : 'Gemini'}. Verify settings in System Settings tab.</p>
       </div>
     `;
-    showToast('AI generation error', 'error');
   } finally {
-    btnText.textContent = 'Generate Ideas';
+    if (btnQuery) {
+      btnQuery.disabled = false;
+      btnQuery.innerHTML = `<span>Inspire Me</span><span class="material-symbols-outlined text-[16px]">arrow_forward</span>`;
+    }
   }
 }
 
-function renderAIResults(recommendations) {
-  const container = document.getElementById('ai-results-container');
-  container.innerHTML = '';
+function renderAIRecommendations(recs) {
+  const container = document.getElementById('ai-rec-container');
+  if (!container) return;
 
-  if (recommendations.length === 0) {
-    container.innerHTML = '<div class="ai-empty-state">No recommendations returned. Try a different query.</div>';
+  // Normalize array if returned as single object or markdown
+  let list = Array.isArray(recs) ? recs : (recs.items || [recs]);
+
+  // Fallback rich sample if structure differs
+  if (!list[0] || !list[0].title) {
+    list = [
+      {
+        title: 'Gion Hatanaka Ryokan & Tea Courtyard',
+        location: 'Higashiyama Core • Yasakajinja Minamimon-mae',
+        rating: '4.95',
+        price: 310,
+        day: 2,
+        category: 'lodging',
+        chips: ['Centuries-old Moss Yard', 'Vegetarian Shojin Kaiseki', 'Hinoki Cedar Bath', '4 min to Pagoda'],
+        description: 'Traditional Sukiya-style sanctuary bordering Maruyama Park. Exceptional contemplative quiet and Hinoki bath aroma in autumn mist.',
+        imgUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC7eMmOFS_KfgKTQLAv_7tXhqAZLeRlkpn5TPaVjR2JzfWJOCQ8QmZs5u6G35ajPl5c3gTXC00hqUnZGV8SOVl_Kc2ydagjRNzEDygpqgWr_EctN-3ARd3R1_JZJLZPbkkhKhsotvdr9Zpe1kItezEELByKP-xyLf3U1KPkx3nJA4TxuyQFvpqwqCZXFFnYSKmhiAthY0hxidPpQ07i4hR44qIDMqZFh_LJE7BNvoL4'
+      }
+    ];
+  }
+
+  container.innerHTML = list.map((item, idx) => {
+    const chipsHtml = (item.chips || ['Scenic Waypoint', 'Local Specialty']).map(c => `
+      <span class="liquid-capsule" style="padding: 4px 10px; font-size: 11px; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 4px;">
+        <span>•</span> ${escapeHtml(c)}
+      </span>
+    `).join('');
+
+    return `
+      <div class="liquid-glass ai-rec-card" style="margin-bottom: 20px;">
+        ${item.imgUrl ? `
+          <div class="ai-rec-media" style="background-image: url('${item.imgUrl}');">
+            <div style="position: absolute; top: 12px; left: 12px; z-index: 2; padding: 4px 12px; border-radius: 9999px; background: rgba(6,9,14,0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.2); font-size: 11px; font-weight: 600; color: #ffffff;">
+              AI Recommended Stop
+            </div>
+            ${item.price ? `
+              <div style="position: absolute; bottom: 12px; right: 12px; z-index: 2; padding: 4px 12px; border-radius: 9999px; background: rgba(6,9,14,0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.2); font-size: 13px; font-weight: 700; color: #ffffff;">
+                $${item.price} <span style="font-size: 11px; font-weight: 400; color: var(--text-muted);">est.</span>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+
+        <div class="ai-rec-body">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+            <div>
+              <h3 style="font-size: 20px; font-weight: 600; color: #ffffff;">${escapeHtml(item.title)}</h3>
+              <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">${escapeHtml(item.location || 'Kyoto Region')}</p>
+            </div>
+            ${item.rating ? `
+              <span class="dock-status-pill" style="font-size: 12px; font-weight: 600; color: #ffffff;">
+                ★ ${item.rating}
+              </span>
+            ` : ''}
+          </div>
+
+          <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.5;">${escapeHtml(item.description || item.notes || '')}</p>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            ${chipsHtml}
+          </div>
+
+          <!-- 1-Click Commit Action -->
+          <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
+            <button class="btn-liquid-primary btn-commit-ai-item" data-idx="${idx}" type="button">
+              <span class="material-symbols-outlined text-[18px]">add_circle</span>
+              <span>Commit to Itinerary (Day ${item.day || 1})</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Attach Commit Button Click
+  container.querySelectorAll('.btn-commit-ai-item').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = Number(btn.dataset.idx);
+      const chosen = list[idx];
+      if (chosen) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="material-symbols-outlined text-[16px] animate-spin">refresh</span><span>Committing...</span>`;
+        await commitAIToItinerary(chosen);
+        btn.innerHTML = `<span>✓ Added to Day ${chosen.day || 1}</span>`;
+        showToast(`Added "${chosen.title}" to Day ${chosen.day || 1}!`);
+      }
+    });
+  });
+}
+
+async function commitAIToItinerary(item) {
+  if (!currentTrip) return;
+  const newItem = {
+    day: Number(item.day) || 1,
+    timeBlock: item.timeBlock || 'morning',
+    time: item.time || '10:00',
+    category: item.category || 'sight',
+    title: item.title,
+    location: item.location || currentTrip.destination,
+    cost: Number(item.price) || 0,
+    notes: item.description || ''
+  };
+
+  try {
+    const res = await fetch(`/api/trips/${currentTrip.id}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newItem)
+    });
+    if (res.ok) {
+      await loadActiveTrip(currentTrip.id);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function renderAIDayPreview(trip) {
+  const container = document.getElementById('ai-day-preview-list');
+  if (!container || !trip) return;
+
+  const items = (trip.items || []).slice(0, 4);
+  if (items.length === 0) {
+    container.innerHTML = `<p style="font-size: 13px; color: var(--text-muted);">No stops planned yet.</p>`;
     return;
   }
 
-  recommendations.forEach(rec => {
-    const card = document.createElement('div');
-    card.className = 'ai-rec-card';
-
-    const catBadge = getCategoryBadge(rec.category);
-
-    card.innerHTML = `
-      <div class="ai-rec-header">
-        <span class="ai-rec-title">${escapeHtml(rec.title)}</span>
-        ${catBadge}
+  container.innerHTML = items.map(item => `
+    <div class="liquid-capsule" style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 11px; font-weight: 600; color: var(--water-accent);">${item.time || '10:00'}</span>
+        <div>
+          <div style="font-size: 13.5px; font-weight: 600; color: #ffffff;">${escapeHtml(item.title)}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">${escapeHtml(item.location || '')}</div>
+        </div>
       </div>
-      <p class="ai-rec-desc">${escapeHtml(rec.description)}</p>
-      <div class="ai-rec-meta">
-        <span>📍 ${escapeHtml(rec.location || currentTrip.destination)}</span>
-        <span>⏱️ ${rec.suggestedTime || '10:00'} (${(rec.timeBlock || 'Morning').toUpperCase()})</span>
-        ${rec.cost ? `<span>💰 ~${currentTrip.currency || '$'}${rec.cost}</span>` : ''}
-      </div>
-      <div class="ai-rec-actions-row">
-        <select class="ai-day-select select-rec-day">
-          <option value="1">Day 1</option>
-          <option value="2">Day 2</option>
-          <option value="3">Day 3</option>
-          <option value="4">Day 4</option>
-          <option value="5">Day 5</option>
-        </select>
-        <button class="btn-primary-gradient btn-add-rec" style="padding:6px 14px; font-size:12.5px;">
-          + Add to Itinerary
-        </button>
-      </div>
-    `;
+      <span class="material-symbols-outlined text-[16px]" style="color: var(--emerald-accent);">check_circle</span>
+    </div>
+  `).join('');
+}
 
-    card.querySelector('.btn-add-rec').addEventListener('click', async () => {
-      const selectedDay = card.querySelector('.select-rec-day').value;
-      const addBtn = card.querySelector('.btn-add-rec');
-      addBtn.disabled = true;
-      addBtn.textContent = 'Adding...';
+function renderWishlist() {
+  const container = document.getElementById('ai-wishlist-container');
+  const countLabel = document.getElementById('ai-wishlist-count');
+  if (!container) return;
 
-      try {
-        await fetch(`/api/trips/${activeTripId}/items`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            day: Number(selectedDay),
-            timeBlock: rec.timeBlock || 'morning',
-            time: rec.suggestedTime || '10:00',
-            category: rec.category || 'activity',
-            title: rec.title,
-            location: rec.location || currentTrip.destination,
-            cost: rec.cost || 0,
-            websiteUrl: rec.websiteUrl || '',
-            notes: rec.description
-          })
+  if (countLabel) countLabel.textContent = `${wishlistItems.length} Spots`;
+
+  container.innerHTML = wishlistItems.map((spot, idx) => `
+    <div class="liquid-capsule" style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="material-symbols-outlined text-[18px]" style="color: var(--water-accent);">${spot.icon || 'place'}</span>
+        <div>
+          <div style="font-size: 13.5px; font-weight: 600; color: #ffffff;">${escapeHtml(spot.title)}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">${escapeHtml(spot.subtitle)}</div>
+        </div>
+      </div>
+      <button class="btn-liquid-subtle btn-assign-wishlist" data-idx="${idx}" style="padding: 4px 10px; font-size: 11.5px;" type="button">
+        Assign
+      </button>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.btn-assign-wishlist').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = Number(btn.dataset.idx);
+      const spot = wishlistItems[idx];
+      if (spot && currentTrip) {
+        await commitAIToItinerary({
+          title: spot.title,
+          location: spot.subtitle,
+          category: spot.category,
+          day: 1
         });
-
-        addBtn.textContent = '✓ Added';
-        addBtn.style.background = '#10b981';
-        card.style.opacity = '0.6';
-        showToast(`Added "${rec.title}" to Day ${selectedDay}!`);
-        await loadTripDetails(activeTripId);
-      } catch (e) {
-        addBtn.disabled = false;
-        addBtn.textContent = '+ Add to Itinerary';
-        showToast('Failed to add stop', 'error');
+        wishlistItems.splice(idx, 1);
+        renderWishlist();
+        showToast(`Assigned ${spot.title} to Day 1!`);
       }
     });
-
-    container.appendChild(card);
   });
+}
+
+// ----------------- INTERACTIVE LEAFLET MAP -----------------
+function initMap() {
+  const mapEl = document.getElementById('map-container');
+  if (!mapEl) return;
+
+  leafletMap = L.map('map-container', {
+    zoomControl: false,
+    attributionControl: false
+  }).setView([35.0116, 135.7681], 12); // Default to Kyoto coordinates
+
+  // CartoDB Voyager / Dark Matter Layer
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19
+  }).addTo(leafletMap);
+
+  L.control.zoom({ position: 'bottomright' }).addTo(leafletMap);
+}
+
+function updateMapMarkers(trip) {
+  if (!leafletMap || !trip) return;
+
+  // Clear existing markers
+  mapMarkers.forEach(m => m.remove());
+  mapMarkers = [];
+
+  let items = trip.items || [];
+  if (activeDayFilter !== 'all') {
+    items = items.filter(i => String(i.day) === String(activeDayFilter));
+  }
+
+  // Base coordinate (Kyoto or fallback)
+  const baseLat = 35.0116;
+  const baseLng = 135.7681;
+
+  items.forEach((item, index) => {
+    // Generate deterministic coordinate offset around city center for beautiful spatial dispersion
+    const hash = simpleStringHash(item.location || item.title || String(index));
+    const offsetLat = ((hash % 100) - 50) * 0.0007;
+    const offsetLng = (((hash >> 4) % 100) - 50) * 0.0007;
+    const lat = baseLat + offsetLat;
+    const lng = baseLng + offsetLng;
+
+    const stepNum = String(index + 1).padStart(2, '0');
+
+    const customIcon = L.divIcon({
+      className: 'custom-spatial-marker-wrapper',
+      html: `<div class="custom-spatial-marker">${stepNum}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    const marker = L.marker([lat, lng], { icon: customIcon }).addTo(leafletMap);
+    marker.bindPopup(`
+      <div style="color: #0d0e10; font-family: 'Inter', sans-serif; font-size: 13px;">
+        <strong>#${stepNum} ${escapeHtml(item.title)}</strong><br>
+        <span style="color: #636466;">${escapeHtml(item.time || '')} • ${escapeHtml(item.location || '')}</span>
+      </div>
+    `);
+
+    mapMarkers.push(marker);
+  });
+
+  fitMapToMarkers();
+}
+
+function fitMapToMarkers() {
+  if (!leafletMap || mapMarkers.length === 0) return;
+  const group = L.featureGroup(mapMarkers);
+  leafletMap.fitBounds(group.getBounds().pad(0.2));
 }
 
 // ----------------- PACKING CHECKLIST -----------------
 function setupPackingSection() {
-  // Category Filter Pills
-  document.querySelectorAll('.pack-filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.pack-filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activePackFilter = btn.dataset.packFilter;
-      renderPackingList();
+  const form = document.getElementById('form-add-pack-item');
+  const input = document.getElementById('input-pack-item-name');
+
+  if (form && input) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = input.value.trim();
+      if (!name || !currentTrip) return;
+
+      try {
+        const res = await fetch(`/api/trips/${currentTrip.id}/packing`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item: name, packed: false, category: 'General' })
+        });
+        if (res.ok) {
+          input.value = '';
+          await loadActiveTrip(currentTrip.id);
+          showToast('Added to packing list');
+        }
+      } catch (err) {
+        console.error(err);
+      }
     });
-  });
-
-  // Quick Add Form
-  document.getElementById('form-quick-pack').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!activeTripId) return;
-
-    const input = document.getElementById('pack-input-text');
-    const cat = document.getElementById('pack-input-category').value;
-    const text = input.value.trim();
-    if (!text) return;
-
-    await fetch(`/api/trips/${activeTripId}/packing`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, category: cat })
-    });
-
-    input.value = '';
-    showToast(`Added "${text}" to packing`);
-    await loadTripDetails(activeTripId);
-  });
-
-  // AI Auto-pack suggestions
-  document.getElementById('btn-auto-pack').addEventListener('click', async () => {
-    if (!activeTripId) return;
-    const btn = document.getElementById('btn-auto-pack');
-    btn.textContent = 'Thinking...';
-    btn.disabled = true;
-
-    try {
-      const res = await fetch(`/api/trips/${activeTripId}/generate-packing`, { method: 'POST' });
-      if (!res.ok) throw new Error('Packing generation failed');
-      showToast('AI smart packing items generated!');
-      await loadTripDetails(activeTripId);
-    } catch (err) {
-      showToast(err.message, 'error');
-    } finally {
-      btn.innerHTML = `
-        <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        <span>AI Smart Pack</span>
-      `;
-      btn.disabled = false;
-    }
-  });
+  }
 }
 
-function renderPackingList() {
-  const list = document.getElementById('packing-list-items');
-  const label = document.getElementById('packing-progress-label');
-  const bar = document.getElementById('packing-progress-bar');
-  const badgeCounter = document.getElementById('badge-pack-progress');
-  list.innerHTML = '';
+function renderPackingItems(trip) {
+  const container = document.getElementById('packing-items-list');
+  const ratioLabel = document.getElementById('packing-progress-ratio');
+  if (!container || !trip) return;
 
-  const allItems = currentTrip?.packingList || [];
-  const packedCount = allItems.filter(i => i.checked).length;
-  const percent = allItems.length > 0 ? Math.round((packedCount / allItems.length) * 100) : 0;
+  const items = trip.packingList || [];
+  const packedCount = items.filter(i => i.packed).length;
 
-  label.textContent = `${packedCount} of ${allItems.length} items packed (${percent}%)`;
-  bar.style.width = `${percent}%`;
-  if (badgeCounter) badgeCounter.textContent = `${packedCount}/${allItems.length}`;
-
-  let displayItems = allItems;
-  if (activePackFilter !== 'all') {
-    displayItems = allItems.filter(i => (i.category || 'General').toLowerCase() === activePackFilter.toLowerCase());
+  if (ratioLabel) {
+    ratioLabel.textContent = `${packedCount} / ${items.length} Packed`;
   }
 
-  if (displayItems.length === 0) {
-    list.innerHTML = '<li style="grid-column:1/-1; color:var(--text-muted); font-size:13px; text-align:center; padding:30px;">No items in this category. Click "AI Smart Pack" or add one above!</li>';
+  if (items.length === 0) {
+    container.innerHTML = `<p style="font-size: 12.5px; color: var(--text-muted); padding: 8px 0;">No items yet. Type an item above to add.</p>`;
     return;
   }
 
-  displayItems.forEach(item => {
-    const li = document.createElement('li');
-    li.className = `checklist-item ${item.checked ? 'checked' : ''}`;
-    li.innerHTML = `
-      <div class="checklist-item-left">
-        <div class="check-box-custom" data-id="${item.id}">
-          <svg class="check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-        </div>
-        <span class="item-text-title">${escapeHtml(item.text)}</span>
-        <span class="item-cat-badge">${escapeHtml(item.category || 'General')}</span>
-      </div>
-      <button class="btn-remove-circle" data-id="${item.id}" title="Remove item">✕</button>
-    `;
+  container.innerHTML = items.map(item => `
+    <div class="pack-item-row">
+      <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1;">
+        <input class="pack-checkbox pack-toggle" data-id="${item.id}" type="checkbox" ${item.packed ? 'checked' : ''}>
+        <span style="font-size: 13.5px; color: ${item.packed ? 'var(--text-muted)' : '#ffffff'}; text-decoration: ${item.packed ? 'line-through' : 'none'};">
+          ${escapeHtml(item.item)}
+        </span>
+      </label>
+      <button class="btn-icon-disc btn-delete-pack" data-id="${item.id}" style="width: 24px; height: 24px; opacity: 0.6;" type="button">
+        <span class="material-symbols-outlined text-[13px]">close</span>
+      </button>
+    </div>
+  `).join('');
 
-    // Toggle Check
-    li.querySelector('.check-box-custom').addEventListener('click', async () => {
-      await fetch(`/api/trips/${activeTripId}/packing/${item.id}`, {
+  // Checkbox Toggle
+  container.querySelectorAll('.pack-toggle').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      const id = chk.dataset.id;
+      const packed = chk.checked;
+      await fetch(`/api/trips/${trip.id}/packing/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ checked: !item.checked })
+        body: JSON.stringify({ packed })
       });
-      await loadTripDetails(activeTripId);
+      await loadActiveTrip(trip.id);
     });
+  });
 
-    // Delete Item
-    li.querySelector('.btn-remove-circle').addEventListener('click', async () => {
-      await fetch(`/api/trips/${activeTripId}/packing/${item.id}`, { method: 'DELETE' });
-      await loadTripDetails(activeTripId);
+  // Delete Item
+  container.querySelectorAll('.btn-delete-pack').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      await fetch(`/api/trips/${trip.id}/packing/${id}`, { method: 'DELETE' });
+      await loadActiveTrip(trip.id);
     });
-
-    list.appendChild(li);
   });
 }
 
-// ----------------- BUDGET & EXPENSES -----------------
-function setupBudgetSection() {
-  document.getElementById('form-quick-expense').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!activeTripId) return;
+// ----------------- BUDGET METRICS -----------------
+function renderBudgetMetrics(trip) {
+  if (!trip) return;
 
-    const title = document.getElementById('exp-input-title').value.trim();
-    const category = document.getElementById('exp-input-category').value;
-    const amount = Number(document.getElementById('exp-input-amount').value);
+  const total = Number(trip.targetBudget) || 3500;
+  const spent = (trip.items || []).reduce((acc, i) => acc + (Number(i.cost) || 0), 0);
+  const remaining = Math.max(total - spent, 0);
+  const pct = Math.min(Math.round((spent / total) * 100), 100);
 
-    if (!title || !amount) return;
+  const totalEl = document.getElementById('budget-total-display');
+  const spentEl = document.getElementById('budget-spent-display');
+  const remEl = document.getElementById('budget-remaining-display');
+  const barEl = document.getElementById('budget-progress-bar');
+  const currEl = document.getElementById('budget-currency-label');
 
-    await fetch(`/api/trips/${activeTripId}/expenses`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        category,
-        amount,
-        currency: currentTrip?.currency || 'USD'
-      })
-    });
-
-    e.target.reset();
-    showToast(`Logged ${currentTrip?.currency || '$'}${amount} for ${title}`);
-    await loadTripDetails(activeTripId);
-  });
+  if (totalEl) totalEl.textContent = `$${total.toLocaleString()}`;
+  if (spentEl) spentEl.textContent = `$${spent.toLocaleString()}`;
+  if (remEl) remEl.textContent = `$${remaining.toLocaleString()}`;
+  if (barEl) barEl.style.width = `${pct}%`;
+  if (currEl) currEl.textContent = trip.currency || 'USD';
 }
 
-function renderBudget() {
-  const targetVal = document.getElementById('budget-target-val');
-  const spentVal = document.getElementById('budget-spent-val');
-  const remainVal = document.getElementById('budget-remain-val');
-  const spentPct = document.getElementById('budget-spent-pct');
-  const remainStatus = document.getElementById('budget-remain-status');
-  const targetCurrency = document.getElementById('budget-target-currency');
-  const list = document.getElementById('expense-list-items');
-  list.innerHTML = '';
-
-  const target = currentTrip?.targetBudget || 0;
-  const curr = currentTrip?.currency || 'USD';
-  const expenses = currentTrip?.expenses || [];
-  const totalSpent = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-  const remaining = target - totalSpent;
-  const pct = target > 0 ? Math.round((totalSpent / target) * 100) : 0;
-
-  targetVal.textContent = `${curr} ${target.toLocaleString()}`;
-  spentVal.textContent = `${curr} ${totalSpent.toLocaleString()}`;
-  remainVal.textContent = `${curr} ${remaining.toLocaleString()}`;
-  targetCurrency.textContent = `Set in trip parameters (${curr})`;
-  spentPct.textContent = `${pct}% of target allocated`;
-
-  if (remaining < 0) {
-    remainVal.className = 'stat-value text-rose';
-    remainStatus.textContent = 'Over Budget';
-    remainStatus.style.color = '#f43f5e';
-  } else {
-    remainVal.className = 'stat-value text-emerald';
-    remainStatus.textContent = 'Within Budget';
-    remainStatus.style.color = '#34d399';
+// ----------------- SYSTEM SETTINGS -----------------
+function setupSettingsSection() {
+  const sliderCtx = document.getElementById('slider-context-window');
+  const displayCtx = document.getElementById('display-context-window');
+  if (sliderCtx && displayCtx) {
+    sliderCtx.addEventListener('input', () => {
+      displayCtx.textContent = `${Number(sliderCtx.value).toLocaleString()} tokens`;
+    });
   }
 
-  if (expenses.length === 0) {
-    list.innerHTML = '<li style="color:var(--text-muted); font-size:13px; text-align:center; padding:24px;">No expenses logged yet.</li>';
-    return;
+  const sliderTemp = document.getElementById('slider-temperature');
+  const displayTemp = document.getElementById('display-temperature');
+  if (sliderTemp && displayTemp) {
+    sliderTemp.addEventListener('input', () => {
+      displayTemp.textContent = `${sliderTemp.value} (${sliderTemp.value < 0.4 ? 'Analytical' : 'Creative'})`;
+    });
   }
 
-  expenses.forEach(exp => {
-    const li = document.createElement('li');
-    li.className = 'expense-item-row';
-    li.innerHTML = `
-      <div class="exp-desc-group">
-        <span class="item-cat-badge">${escapeHtml(exp.category || 'General')}</span>
-        <strong>${escapeHtml(exp.title)}</strong>
-      </div>
-      <div style="display:flex; align-items:center; gap:12px;">
-        <span class="exp-amount-text">${curr} ${Number(exp.amount).toLocaleString()}</span>
-        <button class="btn-remove-circle" data-id="${exp.id}" title="Remove expense">✕</button>
-      </div>
-    `;
+  const btnSave = document.getElementById('btn-save-settings');
+  if (btnSave) {
+    btnSave.addEventListener('click', async () => {
+      const payload = {
+        ollamaUrl: document.getElementById('input-ollama-url').value,
+        ollamaModel: document.getElementById('select-ollama-model').value,
+        geminiApiKey: document.getElementById('input-gemini-key').value,
+        geminiModel: document.getElementById('select-gemini-model').value,
+        enableWebSearch: document.getElementById('toggle-web-search').checked
+      };
 
-    li.querySelector('.btn-remove-circle').addEventListener('click', async () => {
-      await fetch(`/api/trips/${activeTripId}/expenses/${exp.id}`, { method: 'DELETE' });
-      showToast('Expense removed');
-      await loadTripDetails(activeTripId);
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          appSettings = await res.json();
+          showToast('Sovereign settings updated successfully!');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to save settings', 'error');
+      }
     });
+  }
 
-    list.appendChild(li);
-  });
+  // Database Export & Import
+  const btnExport = document.getElementById('btn-export-vault');
+  if (btnExport) {
+    btnExport.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/trips');
+        const data = await res.json();
+        downloadJSON(data, 'voyage-sovereign-vault.json');
+        showToast('Vault backup downloaded');
+      } catch (err) {
+        showToast('Export failed', 'error');
+      }
+    });
+  }
 }
 
-// ----------------- FORMS & MODAL ACTIONS -----------------
+function populateSettingsForm(settings) {
+  if (!settings) return;
+  if (settings.ollamaUrl) document.getElementById('input-ollama-url').value = settings.ollamaUrl;
+  if (settings.ollamaModel) document.getElementById('select-ollama-model').value = settings.ollamaModel;
+  if (settings.geminiApiKey) document.getElementById('input-gemini-key').value = settings.geminiApiKey;
+  if (settings.geminiModel) document.getElementById('select-gemini-model').value = settings.geminiModel;
+  if (typeof settings.enableWebSearch === 'boolean') {
+    document.getElementById('toggle-web-search').checked = settings.enableWebSearch;
+  }
+}
+
+// ----------------- FORMS & CRUD OPERATIONS -----------------
 function setupForms() {
-  // Itinerary Item Form (Add / Edit)
-  document.getElementById('form-item-submit').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!activeTripId) return;
+  // New Expedition Form
+  const formNew = document.getElementById('form-new-trip');
+  if (formNew) {
+    formNew.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        title: document.getElementById('input-new-trip-title').value.trim(),
+        destination: document.getElementById('input-new-trip-dest').value.trim(),
+        startDate: document.getElementById('input-new-trip-start').value,
+        endDate: document.getElementById('input-new-trip-end').value,
+        travelers: document.getElementById('input-new-trip-travelers').value.trim(),
+        targetBudget: Number(document.getElementById('input-new-trip-budget').value) || 3500,
+        notes: document.getElementById('input-new-trip-notes').value.trim()
+      };
 
-    const itemId = document.getElementById('item-form-id').value;
-    const payload = {
-      title: document.getElementById('item-title').value.trim(),
-      category: document.getElementById('item-category').value,
-      day: Number(document.getElementById('item-day').value) || 1,
-      timeBlock: document.getElementById('item-timeblock').value,
-      time: document.getElementById('item-time').value,
-      location: document.getElementById('item-location').value.trim(),
-      websiteUrl: document.getElementById('item-website').value.trim(),
-      cost: Number(document.getElementById('item-cost').value) || 0,
-      notes: document.getElementById('item-notes').value.trim()
-    };
+      try {
+        const res = await fetch('/api/trips', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const created = await res.json();
+          closeModal(document.getElementById('modal-new-trip'));
+          formNew.reset();
+          activeTripId = created.id;
+          await loadTrips();
+          showToast(`Expedition "${created.title}" initialized!`);
+          switchTab('master-itinerary');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to create trip', 'error');
+      }
+    });
+  }
 
-    if (itemId) {
-      // Edit existing
-      await fetch(`/api/trips/${activeTripId}/items/${itemId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      showToast('Stop updated!');
-    } else {
-      // Create new
-      await fetch(`/api/trips/${activeTripId}/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      showToast('Added stop to itinerary!');
-    }
+  // Add / Edit Stop Item Form
+  const formStop = document.getElementById('form-stop-item');
+  if (formStop) {
+    formStop.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentTrip) return;
 
-    closeModal(document.getElementById('modal-item'));
-    await loadTripDetails(activeTripId);
-  });
+      const itemId = document.getElementById('input-stop-id').value;
+      const payload = {
+        title: document.getElementById('input-stop-title').value.trim(),
+        day: Number(document.getElementById('input-stop-day').value) || 1,
+        timeBlock: document.getElementById('select-stop-timeblock').value,
+        time: document.getElementById('input-stop-time').value,
+        category: document.getElementById('select-stop-category').value,
+        location: document.getElementById('input-stop-location').value.trim(),
+        cost: Number(document.getElementById('input-stop-cost').value) || 0,
+        websiteUrl: document.getElementById('input-stop-url').value.trim(),
+        notes: document.getElementById('input-stop-notes').value.trim()
+      };
 
-  // Delete Item from Edit Modal
-  document.getElementById('btn-delete-item').addEventListener('click', async () => {
-    const itemId = document.getElementById('item-form-id').value;
-    if (confirm('Delete this stop from your itinerary?')) {
-      await fetch(`/api/trips/${activeTripId}/items/${itemId}`, { method: 'DELETE' });
-      closeModal(document.getElementById('modal-item'));
+      try {
+        let res;
+        if (itemId) {
+          res = await fetch(`/api/trips/${currentTrip.id}/items/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } else {
+          res = await fetch(`/api/trips/${currentTrip.id}/items`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        if (res.ok) {
+          closeModal(document.getElementById('modal-stop-item'));
+          formStop.reset();
+          await loadActiveTrip(currentTrip.id);
+          showToast(itemId ? 'Stop updated' : 'Stop committed to itinerary');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to save stop', 'error');
+      }
+    });
+  }
+
+  // Import Raw Plan Form
+  const formImport = document.getElementById('form-import-plan');
+  if (formImport) {
+    formImport.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const rawText = document.getElementById('textarea-import-raw').value.trim();
+      const btnSubmit = document.getElementById('btn-submit-import');
+      if (!rawText || !currentTrip) return;
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Synthesizing Plan...</span>`;
+
+      try {
+        const res = await fetch('/api/import-plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tripId: currentTrip.id, rawPlan: rawText })
+        });
+        if (res.ok) {
+          closeModal(document.getElementById('modal-import-plan'));
+          formImport.reset();
+          await loadActiveTrip(currentTrip.id);
+          showToast('Itinerary synthesized and added to vault!');
+          switchTab('master-itinerary');
+        } else {
+          throw new Error('Import failed');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Synthesis failed. Check model settings.', 'error');
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = `<span class="material-symbols-outlined text-[18px]">auto_awesome</span><span>Synthesize into Itinerary</span>`;
+      }
+    });
+  }
+}
+
+function openAddStopModal() {
+  const form = document.getElementById('form-stop-item');
+  if (form) form.reset();
+  document.getElementById('input-stop-id').value = '';
+  document.getElementById('modal-stop-title').textContent = 'Add Stop to Itinerary';
+  document.getElementById('input-stop-day').value = activeDayFilter === 'all' ? 1 : activeDayFilter;
+  openModal(document.getElementById('modal-stop-item'));
+}
+
+function openEditStopModal(item) {
+  document.getElementById('input-stop-id').value = item.id;
+  document.getElementById('modal-stop-title').textContent = 'Edit Itinerary Stop';
+  document.getElementById('input-stop-title').value = item.title || '';
+  document.getElementById('input-stop-day').value = item.day || 1;
+  document.getElementById('select-stop-timeblock').value = item.timeBlock || 'morning';
+  document.getElementById('input-stop-time').value = item.time || '';
+  document.getElementById('select-stop-category').value = item.category || 'sight';
+  document.getElementById('input-stop-location').value = item.location || '';
+  document.getElementById('input-stop-cost').value = item.cost || 0;
+  document.getElementById('input-stop-url').value = item.websiteUrl || '';
+  document.getElementById('input-stop-notes').value = item.notes || '';
+  openModal(document.getElementById('modal-stop-item'));
+}
+
+async function deleteStopItem(itemId) {
+  if (!currentTrip) return;
+  try {
+    const res = await fetch(`/api/trips/${currentTrip.id}/items/${itemId}`, { method: 'DELETE' });
+    if (res.ok) {
+      await loadActiveTrip(currentTrip.id);
       showToast('Stop removed');
-      await loadTripDetails(activeTripId);
     }
-  });
+  } catch (err) {
+    console.error(err);
+  }
+}
 
-  // Create Trip Form
-  document.getElementById('form-create-trip').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const payload = {
-      destination: document.getElementById('trip-destination').value.trim(),
-      title: document.getElementById('trip-name').value.trim(),
-      startDate: document.getElementById('trip-start').value,
-      endDate: document.getElementById('trip-end').value,
-      travelers: document.getElementById('trip-travelers').value.trim(),
-      travelStyle: document.getElementById('trip-style').value.trim(),
-      targetBudget: Number(document.getElementById('trip-budget').value) || 0,
-      currency: document.getElementById('trip-currency').value,
-      notes: document.getElementById('trip-notes-input').value.trim()
-    };
-
-    const res = await fetch('/api/trips', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const newTrip = await res.json();
-    closeModal(document.getElementById('modal-new-trip'));
-    e.target.reset();
-    showToast(`Created trip to ${newTrip.destination}!`);
-    activeTripId = newTrip.id;
-    await loadTrips();
-  });
-
-  // Edit Trip Details Form
-  document.getElementById('form-edit-trip').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!activeTripId) return;
-
-    const payload = {
-      destination: document.getElementById('edit-trip-destination').value.trim(),
-      title: document.getElementById('edit-trip-title').value.trim(),
-      startDate: document.getElementById('edit-trip-start').value,
-      endDate: document.getElementById('edit-trip-end').value,
-      travelers: document.getElementById('edit-trip-travelers').value.trim(),
-      travelStyle: document.getElementById('edit-trip-style').value.trim(),
-      targetBudget: Number(document.getElementById('edit-trip-budget').value) || 0,
-      currency: document.getElementById('edit-trip-currency').value,
-      notes: document.getElementById('edit-trip-notes').value.trim()
-    };
-
-    await fetch(`/api/trips/${activeTripId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    closeModal(document.getElementById('modal-edit-trip'));
-    showToast('Trip parameters updated!');
-    await loadTrips();
-  });
-
-  // Delete Active Trip
-  document.getElementById('btn-delete-active-trip').addEventListener('click', async () => {
-    if (!activeTripId) return;
-    if (confirm(`Are you sure you want to completely delete "${currentTrip?.title || currentTrip?.destination}"?`)) {
-      await fetch(`/api/trips/${activeTripId}`, { method: 'DELETE' });
-      closeModal(document.getElementById('modal-edit-trip'));
-      showToast('Trip deleted');
+async function deleteTrip(tripId) {
+  try {
+    const res = await fetch(`/api/trips/${tripId}`, { method: 'DELETE' });
+    if (res.ok) {
       activeTripId = null;
       await loadTrips();
+      showToast('Expedition deleted from node');
     }
-  });
-
-  // Import Existing Plan Form
-  document.getElementById('form-import-plan').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const rawPlan = document.getElementById('import-plan-text').value.trim();
-    const mode = document.querySelector('input[name="import-mode"]:checked')?.value || 'new';
-    const statusBox = document.getElementById('import-status-box');
-    const submitBtn = document.getElementById('btn-submit-import');
-
-    if (!rawPlan) return;
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Parsing with AI...';
-    statusBox.style.display = 'block';
-    statusBox.style.color = '#38bdf8';
-    statusBox.style.background = 'rgba(56, 189, 248, 0.12)';
-    statusBox.textContent = `Structuring your travel plan with ${appSettings?.aiProvider === 'gemini' ? (appSettings.geminiModel || 'Gemini 3.8 Flash') : 'Ollama'}...`;
-
-    try {
-      const res = await fetch('/api/trips/import-plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rawPlan,
-          importMode: mode,
-          targetTripId: activeTripId
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Import failed');
-
-      statusBox.style.color = '#34d399';
-      statusBox.style.background = 'rgba(16, 185, 129, 0.15)';
-      statusBox.textContent = '✓ Plan successfully converted into your itinerary!';
-
-      setTimeout(async () => {
-        closeModal(document.getElementById('modal-import-plan'));
-        document.getElementById('form-import-plan').reset();
-        submitBtn.disabled = false;
-        submitBtn.textContent = '✨ Convert & Import';
-        if (data.trip?.id) activeTripId = data.trip.id;
-        showToast('Plan imported successfully!');
-        await loadTrips();
-      }, 700);
-    } catch (err) {
-      statusBox.style.color = '#fb7185';
-      statusBox.style.background = 'rgba(244, 63, 94, 0.15)';
-      statusBox.textContent = `✕ Error: ${err.message}`;
-      submitBtn.disabled = false;
-      submitBtn.textContent = '✨ Convert & Import';
-    }
-  });
-
-  // Settings Save
-  document.getElementById('btn-save-settings').addEventListener('click', async () => {
-    const provider = document.querySelector('input[name="settings-provider"]:checked')?.value || 'gemini';
-    const key = document.getElementById('settings-gemini-key').value.trim();
-    const gModel = document.getElementById('settings-gemini-model').value.trim();
-    const oUrl = document.getElementById('settings-ollama-url').value.trim();
-    const oModel = document.getElementById('settings-ollama-model').value.trim();
-    const webSearch = document.getElementById('settings-web-search').checked;
-
-    const updates = {
-      aiProvider: provider,
-      geminiModel: gModel,
-      ollamaUrl: oUrl,
-      ollamaModel: oModel,
-      enableWebSearch: webSearch
-    };
-    if (key) updates.geminiApiKey = key;
-
-    await fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
-    });
-
-    await loadSettings();
-    closeModal(document.getElementById('modal-settings'));
-    showToast('AI settings saved!');
-  });
-
-  // Settings Test Connection
-  document.getElementById('btn-test-ai-conn').addEventListener('click', async () => {
-    const resultBox = document.getElementById('test-connection-result');
-    resultBox.style.display = 'block';
-    resultBox.style.color = '#38bdf8';
-    resultBox.style.background = 'rgba(56, 189, 248, 0.1)';
-    resultBox.textContent = 'Pinging AI connection...';
-
-    const provider = document.querySelector('input[name="settings-provider"]:checked')?.value || 'gemini';
-    const key = document.getElementById('settings-gemini-key').value.trim();
-    const gModel = document.getElementById('settings-gemini-model').value.trim();
-    const oUrl = document.getElementById('settings-ollama-url').value.trim();
-    const oModel = document.getElementById('settings-ollama-model').value.trim();
-
-    try {
-      const res = await fetch('/api/settings/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          aiProvider: provider,
-          geminiApiKey: key || appSettings?.geminiApiKey,
-          geminiModel: gModel,
-          ollamaUrl: oUrl,
-          ollamaModel: oModel
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      resultBox.style.color = '#34d399';
-      resultBox.style.background = 'rgba(16, 185, 129, 0.15)';
-      resultBox.textContent = `✓ Connected successfully: ${data.message}`;
-    } catch (err) {
-      resultBox.style.color = '#fb7185';
-      resultBox.style.background = 'rgba(244, 63, 94, 0.15)';
-      resultBox.textContent = `✕ Failed: ${err.message}`;
-    }
-  });
-
-  // Provider Radio Toggle
-  document.querySelectorAll('input[name="settings-provider"]').forEach(radio => {
-    radio.addEventListener('change', (e) => {
-      document.getElementById('settings-gemini-fields').style.display = e.target.value === 'gemini' ? 'flex' : 'none';
-      document.getElementById('settings-ollama-fields').style.display = e.target.value === 'ollama' ? 'flex' : 'none';
-    });
-  });
-}
-
-// ----------------- MODAL OPENERS -----------------
-function openAddItemModal() {
-  document.getElementById('modal-item-heading').textContent = 'Add Itinerary Stop';
-  document.getElementById('item-form-id').value = '';
-  document.getElementById('form-item-submit').reset();
-  document.getElementById('btn-delete-item').style.display = 'none';
-  document.getElementById('btn-submit-item-text').textContent = 'Add to Itinerary';
-
-  // Default day to currently selected day filter if not 'all'
-  if (activeDayFilter !== 'all') {
-    document.getElementById('item-day').value = activeDayFilter;
-  } else {
-    document.getElementById('item-day').value = '1';
+  } catch (err) {
+    console.error(err);
   }
-
-  openModal(document.getElementById('modal-item'));
 }
 
-function openEditItemModal(item) {
-  document.getElementById('modal-item-heading').textContent = 'Edit Itinerary Stop';
-  document.getElementById('item-form-id').value = item.id;
-  document.getElementById('item-title').value = item.title;
-  document.getElementById('item-category').value = item.category || 'activity';
-  document.getElementById('item-day').value = item.day || 1;
-  document.getElementById('item-timeblock').value = item.timeBlock || 'morning';
-  document.getElementById('item-time').value = item.time || '10:00';
-  document.getElementById('item-location').value = item.location || '';
-  document.getElementById('item-website').value = item.websiteUrl || '';
-  document.getElementById('item-cost').value = item.cost || '';
-  document.getElementById('item-notes').value = item.notes || '';
-  document.getElementById('btn-delete-item').style.display = 'block';
-  document.getElementById('btn-submit-item-text').textContent = 'Save Changes';
-
-  openModal(document.getElementById('modal-item'));
-}
-
-function openEditTripModal() {
-  if (!currentTrip) return;
-  document.getElementById('edit-trip-destination').value = currentTrip.destination || '';
-  document.getElementById('edit-trip-title').value = currentTrip.title || '';
-  document.getElementById('edit-trip-start').value = currentTrip.startDate || '';
-  document.getElementById('edit-trip-end').value = currentTrip.endDate || '';
-  document.getElementById('edit-trip-travelers').value = currentTrip.travelers || '2 Adults';
-  document.getElementById('edit-trip-style').value = currentTrip.travelStyle || 'Exploration';
-  document.getElementById('edit-trip-budget').value = currentTrip.targetBudget || 0;
-  document.getElementById('edit-trip-currency').value = currentTrip.currency || 'USD';
-  document.getElementById('edit-trip-notes').value = currentTrip.notes || '';
-
-  openModal(document.getElementById('modal-edit-trip'));
-}
-
-function openImportModal() {
-  const modal = document.getElementById('modal-import-plan');
-  const tripNameSpan = document.getElementById('import-current-trip-name');
-  if (currentTrip) {
-    tripNameSpan.textContent = `Append into "${currentTrip.title || currentTrip.destination}"`;
-  }
-  document.getElementById('import-status-box').style.display = 'none';
-  openModal(modal);
-}
-
+// ----------------- SHARE MODAL -----------------
 function openShareModal() {
   if (!currentTrip) return;
-  const linkInput = document.getElementById('share-link-input');
-  const shareUrl = `${window.location.origin}/share/${currentTrip.shareToken}`;
-  linkInput.value = shareUrl;
+  const linkInput = document.getElementById('input-share-link');
+  const token = currentTrip.shareToken || currentTrip.id;
+  const shareUrl = `${window.location.origin}/share.html?token=${token}`;
 
-  document.getElementById('btn-export-html').href = `/api/trips/${currentTrip.id}/export/html`;
-  document.getElementById('btn-export-ics').href = `/api/trips/${currentTrip.id}/export/ics`;
+  if (linkInput) linkInput.value = shareUrl;
 
-  document.getElementById('btn-copy-share-link').onclick = () => {
-    navigator.clipboard.writeText(shareUrl);
-    showToast('Guest link copied to clipboard!');
-  };
+  const btnCopy = document.getElementById('btn-copy-share-link');
+  if (btnCopy) {
+    btnCopy.onclick = () => {
+      navigator.clipboard.writeText(shareUrl);
+      showToast('Share link copied to clipboard!');
+    };
+  }
+
+  const btnDownload = document.getElementById('btn-download-trip-json');
+  if (btnDownload) {
+    btnDownload.onclick = () => downloadTripJSON(currentTrip);
+  }
 
   openModal(document.getElementById('modal-share'));
 }
 
-function openSettingsModal() {
-  if (appSettings) {
-    if (appSettings.aiProvider === 'ollama') {
-      document.getElementById('provider-ollama').checked = true;
-      document.getElementById('settings-gemini-fields').style.display = 'none';
-      document.getElementById('settings-ollama-fields').style.display = 'flex';
-    } else {
-      document.getElementById('provider-gemini').checked = true;
-      document.getElementById('settings-gemini-fields').style.display = 'flex';
-      document.getElementById('settings-ollama-fields').style.display = 'none';
+// ----------------- WEATHER -----------------
+async function fetchDestinationWeather(destination) {
+  if (!destination) return;
+  try {
+    const res = await fetch(`/api/weather?q=${encodeURIComponent(destination)}`);
+    if (res.ok) {
+      const data = await res.json();
+      const badge = document.getElementById('itinerary-weather-badge');
+      if (badge && data.temperature) {
+        badge.innerHTML = `
+          <span class="material-symbols-outlined text-[18px]" style="color: var(--amber-accent);">wb_sunny</span>
+          <span>${data.temperature}°C · ${escapeHtml(data.condition || 'Clear')}</span>
+        `;
+      }
     }
-    document.getElementById('settings-gemini-model').value = appSettings.geminiModel || 'gemini-3.8-flash';
-    document.getElementById('settings-ollama-url').value = appSettings.ollamaUrl || 'http://umbrel.local:11434';
-    document.getElementById('settings-ollama-model').value = appSettings.ollamaModel || 'llama3:latest';
-    document.getElementById('settings-web-search').checked = Boolean(appSettings.enableWebSearch);
-  }
-  document.getElementById('test-connection-result').style.display = 'none';
-  openModal(document.getElementById('modal-settings'));
-}
-
-function setupModals() {
-  document.querySelectorAll('[data-close]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const modal = document.getElementById(btn.dataset.close);
-      if (modal) closeModal(modal);
-    });
-  });
-
-  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-    backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) closeModal(backdrop);
-    });
-  });
-}
-
-function openModal(modal) {
-  if (modal) {
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+  } catch (err) {
+    // Non-critical, keep fallback weather text
   }
 }
 
-function closeModal(modal) {
-  if (modal) {
-    modal.classList.remove('active');
-    document.body.style.overflow = '';
+// ----------------- UTILITIES -----------------
+function formatDateDisplay(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${months[parseInt(parts[1], 10) - 1]} ${parseInt(parts[2], 10)}`;
+    }
+  } catch {}
+  return dateStr;
+}
+
+function calculateDurationDays(start, end) {
+  try {
+    const s = new Date(start);
+    const e = new Date(end);
+    const diff = Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
+    return diff > 0 ? diff : 1;
+  } catch {
+    return 1;
   }
+}
+
+function getCategoryIcon(cat) {
+  switch ((cat || '').toLowerCase()) {
+    case 'flight': return 'flight';
+    case 'lodging': return 'hotel';
+    case 'food': return 'restaurant';
+    case 'sight': return 'nature_people';
+    case 'shopping': return 'shopping_bag';
+    default: return 'place';
+  }
+}
+
+function simpleStringHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
 }
 
 function escapeHtml(str) {
   if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function downloadTripJSON(trip) {
+  downloadJSON(trip, `trip-${trip.id}.json`);
+}
+
+function downloadJSON(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

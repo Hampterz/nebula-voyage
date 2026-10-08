@@ -1,427 +1,159 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#070a12">
-  <title>Shared Itinerary · Voyage</title>
+  <meta name="theme-color" content="#06090e">
+  <title>Shared Itinerary · Nebula Voyage</title>
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  
   <style>
-    :root {
-      --bg-deep: #070a12;
-      --bg-glass-card: rgba(18, 26, 44, 0.75);
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --border-medium: rgba(255, 255, 255, 0.14);
-      --primary: #6366f1;
-      --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
-      --r-sm: 8px;
-      --r-md: 14px;
-      --r-lg: 20px;
-      --r-full: 9999px;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-      background: var(--bg-deep);
-      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.18), transparent 70%);
-      color: var(--text-main);
-      line-height: 1.5;
-      padding: 16px;
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-    .container { max-width: 740px; margin: 0 auto; padding-bottom: 60px; }
-    
-    .nav-guest {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 14px 0 24px;
-    }
-    .brand-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .brand-icon-box {
-      width: 32px;
-      height: 32px;
-      border-radius: var(--r-sm);
-      background: var(--primary-gradient);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-    }
-    .brand-title {
-      font-family: 'Outfit', sans-serif;
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      color: #fff;
-    }
-    .guest-badge {
-      font-size: 11.5px;
-      font-weight: 600;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--border-subtle);
-      padding: 4px 12px;
-      border-radius: var(--r-full);
-      color: var(--text-muted);
-    }
-
-    .hero-card {
-      background: linear-gradient(135deg, rgba(23, 32, 51, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
-      border: 1px solid var(--border-medium);
-      border-radius: var(--r-lg);
-      padding: 24px;
-      margin-bottom: 20px;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-    }
-    .hero-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .meta-chip {
-      font-size: 12px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: var(--r-full);
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-muted);
-    }
-    .meta-chip.dest {
-      background: rgba(99, 102, 241, 0.15);
-      border-color: rgba(99, 102, 241, 0.3);
-      color: #a5b4fc;
-    }
-    .hero-title {
-      font-family: 'Outfit', sans-serif;
-      font-size: 28px;
-      font-weight: 800;
-      color: #fff;
-      margin-bottom: 8px;
-      line-height: 1.25;
-    }
-    .hero-notes {
-      font-size: 13.5px;
-      color: var(--text-muted);
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-      padding-top: 12px;
-      margin-top: 12px;
-      line-height: 1.5;
-    }
-
-    .day-filter-bar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-      overflow-x: auto;
-      scrollbar-width: none;
-      padding-bottom: 4px;
-    }
-    .day-filter-bar::-webkit-scrollbar { display: none; }
-    .day-btn {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-muted);
-      padding: 6px 16px;
-      border-radius: var(--r-full);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s ease;
-    }
-    .day-btn.active {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
-    }
-
-    .day-timeline-group { margin-bottom: 24px; }
-    .day-header {
-      font-family: 'Outfit', sans-serif;
-      font-size: 18px;
-      font-weight: 700;
-      color: #c7d2fe;
-      border-bottom: 2px solid rgba(255, 255, 255, 0.06);
-      padding-bottom: 6px;
-      margin-bottom: 12px;
-    }
-
-    .item-card {
-      background: var(--bg-glass-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--r-md);
-      padding: 16px;
-      margin-bottom: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      backdrop-filter: blur(12px);
-    }
-    .item-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 10px;
-    }
-    .item-title {
-      font-size: 15.5px;
-      font-weight: 700;
-      color: #fff;
-    }
-    .item-time-badge {
-      font-size: 11.5px;
-      font-weight: 700;
-      color: #a5b4fc;
-      background: rgba(99, 102, 241, 0.12);
-      padding: 2px 8px;
-      border-radius: var(--r-sm);
-      white-space: nowrap;
-    }
-    .item-loc {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    .item-notes {
-      font-size: 12.5px;
-      color: #cbd5e1;
-      background: rgba(0, 0, 0, 0.25);
-      padding: 8px 12px;
-      border-radius: var(--r-sm);
-    }
-    .btn-maps {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      align-self: flex-start;
-      margin-top: 4px;
-      background: rgba(56, 189, 248, 0.12);
-      border: 1px solid rgba(56, 189, 248, 0.25);
-      color: #38bdf8;
-      text-decoration: none;
-      padding: 6px 12px;
-      border-radius: var(--r-sm);
-      font-size: 12px;
-      font-weight: 600;
-      transition: all 0.15s ease;
-    }
-    .btn-maps:hover { background: rgba(56, 189, 248, 0.22); }
-
-    .cat-flight { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-    .cat-hotel { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-    .cat-food { background: rgba(244, 63, 94, 0.2); color: #fb7185; }
-    .cat-activity { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .cat-note { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
-    .cat-badge {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: var(--r-full);
-      text-transform: uppercase;
-      margin-right: 6px;
-    }
-
-    .footer-note {
-      text-align: center;
-      color: var(--text-dim);
-      font-size: 12px;
-      margin-top: 36px;
+    .guest-container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 32px 16px 80px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header class="nav-guest">
-      <div class="brand-group">
-        <div class="brand-icon-box">🧭</div>
-        <span class="brand-title">Voyage</span>
+
+  <div class="guest-container">
+    <!-- Top Header -->
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div class="dock-brand-icon">
+          <span class="material-symbols-outlined text-[20px]">explore</span>
+        </div>
+        <div>
+          <span style="font-size: 16px; font-weight: 600; color: #ffffff;">Nebula Voyage</span>
+          <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--water-accent); display: block;">Sovereign Companion View</span>
+        </div>
       </div>
-      <span class="guest-badge">Guest Itinerary View</span>
+      <div class="dock-status-pill">
+        <span class="dock-status-dot"></span>
+        <span>Encrypted Read-Only</span>
+      </div>
     </header>
 
-    <div class="hero-card" id="guest-hero">
-      <div class="hero-meta" id="guest-meta">
-        <span class="meta-chip dest" id="meta-dest">📍 Loading...</span>
+    <!-- Trip Hero Slab -->
+    <div id="shared-trip-hero" class="liquid-glass" style="padding: 32px; margin-bottom: 28px;">
+      <div style="font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--water-accent); font-weight: 600; margin-bottom: 8px;">
+        Verified Expedition Itinerary
       </div>
-      <h1 class="hero-title" id="guest-title">Shared Travel Plan</h1>
-      <p class="hero-notes" id="guest-notes"></p>
+      <h1 id="share-title" style="font-size: 32px; font-weight: 500; color: #ffffff; margin-bottom: 8px;">Loading Expedition...</h1>
+      <p id="share-desc" style="font-size: 14.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px;"></p>
+      
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13.5px; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;">
+        <span style="display: flex; align-items: center; gap: 6px; color: #ffffff;">
+          <span class="material-symbols-outlined text-[16px]">location_on</span>
+          <span id="share-dest">Loading...</span>
+        </span>
+        <span style="opacity: 0.3;">•</span>
+        <span id="share-dates"></span>
+        <span style="opacity: 0.3;">•</span>
+        <span id="share-stops-count"></span>
+      </div>
     </div>
 
-    <div class="day-filter-bar" id="guest-day-filter"></div>
-
-    <div id="guest-timeline">
-      <p style="text-align:center; padding:32px; color:var(--text-muted);">Loading itinerary details...</p>
+    <!-- Timeline Stops -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+      <h2 style="font-size: 20px; font-weight: 500; color: #ffffff;">Day-by-Day Timeline</h2>
     </div>
 
-    <footer class="footer-note">
-      Crafted & shared with Voyage · Travel Planner
-    </footer>
+    <div id="share-timeline-container" class="timeline-flow-container">
+      <div class="timeline-step-line"></div>
+      <div id="share-items-list">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
   </div>
 
   <script>
-    const token = window.location.pathname.split('/').pop();
-    let tripData = null;
-    let selectedDay = 'all';
-
     async function loadSharedTrip() {
-      try {
-        const res = await fetch(`/api/share/${token}`);
-        if (!res.ok) throw new Error('Shared trip not found or expired');
-        tripData = await res.json();
-        renderSharedHero();
-        renderDayButtons();
-        renderTimeline();
-      } catch (err) {
-        document.getElementById('guest-timeline').innerHTML = `
-          <div style="text-align:center; padding:48px; color:#fb7185;">
-            <h3 style="font-family:'Outfit'; font-size:22px;">Trip Not Found</h3>
-            <p style="font-size:13.5px; margin-top:8px; color:var(--text-muted);">This shared link may have expired or is invalid.</p>
-          </div>
-        `;
-      }
-    }
-
-    function renderSharedHero() {
-      document.title = `${tripData.title || tripData.destination} · Voyage Itinerary`;
-      document.getElementById('guest-title').textContent = tripData.title || tripData.destination;
-      document.getElementById('meta-dest').textContent = `📍 ${tripData.destination}`;
-      
-      const metaBox = document.getElementById('guest-meta');
-      if (tripData.startDate) {
-        const dateTag = document.createElement('span');
-        dateTag.className = 'meta-chip';
-        dateTag.textContent = `📅 ${tripData.startDate} to ${tripData.endDate || 'Upcoming'}`;
-        metaBox.appendChild(dateTag);
-      }
-      if (tripData.travelers) {
-        const trTag = document.createElement('span');
-        trTag.className = 'meta-chip';
-        trTag.textContent = `👥 ${tripData.travelers}`;
-        metaBox.appendChild(trTag);
-      }
-      if (tripData.travelStyle) {
-        const stTag = document.createElement('span');
-        stTag.className = 'meta-chip';
-        stTag.textContent = `✨ ${tripData.travelStyle}`;
-        metaBox.appendChild(stTag);
-      }
-
-      if (tripData.notes) {
-        document.getElementById('guest-notes').textContent = tripData.notes;
-      } else {
-        document.getElementById('guest-notes').style.display = 'none';
-      }
-    }
-
-    function renderDayButtons() {
-      const filterBox = document.getElementById('guest-day-filter');
-      filterBox.innerHTML = '<button class="day-btn active" data-day="all">All Days</button>';
-
-      if (!tripData.items || tripData.items.length === 0) return;
-      const days = [...new Set(tripData.items.map(i => Number(i.day) || 1))].sort((a,b) => a - b);
-
-      days.forEach(d => {
-        const btn = document.createElement('button');
-        btn.className = 'day-btn';
-        btn.dataset.day = d;
-        btn.textContent = `Day ${d}`;
-        filterBox.appendChild(btn);
-      });
-
-      filterBox.querySelectorAll('.day-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          filterBox.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          selectedDay = btn.dataset.day;
-          renderTimeline();
-        });
-      });
-    }
-
-    function renderTimeline() {
-      const container = document.getElementById('guest-timeline');
-      container.innerHTML = '';
-
-      if (!tripData.items || tripData.items.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:32px; color:var(--text-muted);">No scheduled stops found in this trip.</p>';
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      if (!token) {
+        document.getElementById('share-title').textContent = 'Invalid or Missing Share Token';
         return;
       }
 
-      let items = tripData.items;
-      if (selectedDay !== 'all') {
-        items = items.filter(i => String(i.day) === String(selectedDay));
-      }
+      try {
+        const res = await fetch(`/api/share/${token}`);
+        if (!res.ok) throw new Error('Expedition not found');
+        const trip = await res.json();
 
-      const daysMap = {};
-      items.forEach(item => {
-        const d = item.day || 1;
-        if (!daysMap[d]) daysMap[d] = [];
-        daysMap[d].push(item);
-      });
+        document.getElementById('share-title').textContent = trip.title;
+        document.getElementById('share-desc').textContent = trip.notes || 'Curated travel plan shared securely from a sovereign Umbrel node.';
+        document.getElementById('share-dest').textContent = trip.destination;
+        document.getElementById('share-dates').textContent = `${trip.startDate} to ${trip.endDate}`;
+        document.getElementById('share-stops-count').textContent = `${(trip.items || []).length} Stops`;
 
-      const sortedDays = Object.keys(daysMap).sort((a, b) => Number(a) - Number(b));
+        const listContainer = document.getElementById('share-items-list');
+        const items = (trip.items || []).sort((a,b) => (a.day - b.day) || (a.time || '').localeCompare(b.time || ''));
 
-      sortedDays.forEach(day => {
-        const group = document.createElement('div');
-        group.className = 'day-timeline-group';
-        group.innerHTML = `<div class="day-header">Day ${day}</div>`;
+        if (items.length === 0) {
+          listContainer.innerHTML = `<p style="color: var(--text-muted);">No stops in this itinerary yet.</p>`;
+          return;
+        }
 
-        daysMap[day].sort((a, b) => (a.time || '10:00').localeCompare(b.time || '10:00')).forEach(item => {
-          const card = document.createElement('div');
-          card.className = 'item-card';
+        listContainer.innerHTML = items.map((item, index) => {
+          const stepNumber = String(index + 1).padStart(2, '0');
+          const mapQuery = encodeURIComponent(item.location || item.title);
+          const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
 
-          const catBadge = getCatBadge(item.category);
-          const gmaps = item.mapUrl || (item.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}` : '');
+          return `
+            <article class="liquid-glass itinerary-item-card" style="margin-bottom: 20px;">
+              <div class="timeline-step-node">${stepNumber}</div>
 
-          card.innerHTML = `
-            <div class="item-top">
-              <div>
-                ${catBadge}
-                <span class="item-title">${escapeHtml(item.title)}</span>
+              <div class="item-card-header">
+                <div class="item-time-badge">
+                  <span class="material-symbols-outlined text-[16px]">place</span>
+                  <span>Day ${item.day} • ${item.time || 'Flexible'} (${item.timeBlock || 'Day'})</span>
+                </div>
+                <span style="font-size: 11px; text-transform: uppercase; padding: 2px 8px; border-radius: 9999px; background: rgba(255,255,255,0.08); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.12);">
+                  ${item.category || 'Stop'}
+                </span>
               </div>
-              <span class="item-time-badge">${item.time || 'Flexible'} • ${(item.timeBlock || 'Day').toUpperCase()}</span>
-            </div>
-            ${item.location ? `<div class="item-loc">📍 ${escapeHtml(item.location)}</div>` : ''}
-            ${item.notes ? `<div class="item-notes">${escapeHtml(item.notes)}</div>` : ''}
-            ${gmaps ? `<a href="${gmaps}" target="_blank" rel="noopener" class="btn-maps">📍 Directions in Google Maps ↗</a>` : ''}
+
+              <h3 class="item-title">${escapeHtml(item.title)}</h3>
+              ${item.notes ? `<p class="item-notes">${escapeHtml(item.notes)}</p>` : ''}
+
+              <div class="item-meta-footer">
+                <div style="color: var(--text-muted);">
+                  ${escapeHtml(item.location || '')}
+                </div>
+                <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="color: #ffffff; text-decoration: none; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                  <span>Open in Maps</span>
+                  <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+                </a>
+              </div>
+            </article>
           `;
-          group.appendChild(card);
-        });
+        }).join('');
 
-        container.appendChild(group);
-      });
-    }
-
-    function getCatBadge(cat) {
-      const map = {
-        flight: '<span class="cat-badge cat-flight">✈️ Flight</span>',
-        hotel: '<span class="cat-badge cat-hotel">🏨 Hotel</span>',
-        food: '<span class="cat-badge cat-food">🍽️ Food</span>',
-        activity: '<span class="cat-badge cat-activity">🎯 Activity</span>',
-        note: '<span class="cat-badge cat-note">📝 Note</span>'
-      };
-      return map[cat] || '<span class="cat-badge cat-activity">🎯 Activity</span>';
+      } catch (err) {
+        console.error(err);
+        document.getElementById('share-title').textContent = 'Expedition Not Found';
+        document.getElementById('share-desc').textContent = 'The link may have expired or the voyage was removed by the host node.';
+      }
     }
 
     function escapeHtml(str) {
       if (!str) return '';
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
 
-    loadSharedTrip();
+    window.addEventListener('DOMContentLoaded', loadSharedTrip);
   </script>
 </body>
 </html>

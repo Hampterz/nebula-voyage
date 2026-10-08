@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0a0e1a">
+  <meta name="theme-color" content="#06090e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Voyage · Modern AI Trip Planner & Itinerary</title>
+  <title>Nebula Voyage · Spatial AI Trip Planner & Itinerary</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
   
   <!-- Leaflet Map CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -21,776 +22,785 @@
   <!-- APP TOAST NOTIFICATIONS -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <!-- TOP APP BAR -->
-  <header class="app-header">
-    <div class="header-inner">
-      <!-- Left: Brand Logo & Trip Selector -->
-      <div class="header-left">
-        <div class="brand-pill" id="btn-brand-home" title="Voyage AI Travel Planner">
-          <div class="brand-icon-box">
-            <svg viewBox="0 0 24 24" class="svg-icon brand-svg" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor"/>
-            </svg>
-          </div>
-          <span class="brand-title">Voyage</span>
+  <!-- FLOATING SPATIAL NAVIGATION DOCK (TOP DESKTOP) -->
+  <header class="app-dock-header">
+    <div class="dock-inner">
+      <!-- Left: Brand Logo & Node Status -->
+      <div class="dock-brand" id="btn-dock-brand" title="Nebula Voyage · Sovereign Travel Suite">
+        <div class="dock-brand-icon">
+          <span class="material-symbols-outlined text-[20px]">explore</span>
         </div>
-
-        <!-- Trip Switcher Dropdown Pill -->
-        <div class="trip-switcher-wrap">
-          <button id="btn-trip-selector-trigger" class="trip-switcher-pill" aria-haspopup="listbox" aria-expanded="false">
-            <span class="trip-dest-icon">📍</span>
-            <span id="header-trip-name" class="trip-name-text">Loading Trip...</span>
-            <svg class="chevron-svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-          </button>
-          
-          <!-- Dropdown Menu -->
-          <div id="trip-dropdown-menu" class="trip-dropdown-menu">
-            <div class="dropdown-header">
-              <span>Your Trips</span>
-              <button id="btn-quick-new-trip" class="btn-text-action">+ New Trip</button>
-            </div>
-            <div id="trip-dropdown-list" class="trip-dropdown-list" role="listbox">
-              <!-- Dynamically rendered -->
-            </div>
+        <div style="display: flex; flex-direction: column; gap: 1px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="dock-brand-title">Nebula Voyage</span>
+            <span class="dock-brand-badge">Umbrel OS</span>
           </div>
         </div>
       </div>
 
-      <!-- Center: Desktop Navigation Tabs -->
-      <nav class="desktop-nav" role="tablist">
-        <button id="nav-tab-itinerary" class="nav-tab active" role="tab" aria-selected="true" data-tab="itinerary">
-          <svg viewBox="0 0 24 24" class="tab-svg" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <span>Itinerary</span>
+      <!-- Center: Spatial Tabs Navigation -->
+      <nav class="dock-nav" role="tablist">
+        <button class="dock-nav-item active" data-tab="trips-hub" role="tab" aria-selected="true">
+          <span class="material-symbols-outlined text-[18px]">folder_special</span>
+          <span>Trips Hub</span>
         </button>
-        <button id="nav-tab-ai" class="nav-tab" role="tab" aria-selected="false" data-tab="ai">
-          <svg viewBox="0 0 24 24" class="tab-svg" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-          <span>AI Co-Pilot</span>
+        <button class="dock-nav-item" data-tab="ai-planner" role="tab" aria-selected="false">
+          <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+          <span>AI Planner</span>
         </button>
-        <button id="nav-tab-packing" class="nav-tab" role="tab" aria-selected="false" data-tab="packing">
-          <svg viewBox="0 0 24 24" class="tab-svg" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-          <span>Packing</span>
-          <span id="badge-pack-progress" class="tab-counter">0/0</span>
+        <button class="dock-nav-item" data-tab="master-itinerary" role="tab" aria-selected="false">
+          <span class="material-symbols-outlined text-[18px]">map</span>
+          <span>Master Itinerary</span>
         </button>
-        <button id="nav-tab-budget" class="nav-tab" role="tab" aria-selected="false" data-tab="budget">
-          <svg viewBox="0 0 24 24" class="tab-svg" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          <span>Budget</span>
+        <button class="dock-nav-item" data-tab="system-settings" role="tab" aria-selected="false">
+          <span class="material-symbols-outlined text-[18px]">tune</span>
+          <span>System Settings</span>
         </button>
       </nav>
 
-      <!-- Right: Actions (Share, Settings) -->
-      <div class="header-right">
-        <button id="btn-header-share" class="btn-action-pill" title="Share with companions or export itinerary">
-          <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-          <span class="desktop-only-text">Share</span>
-        </button>
-
-        <button id="btn-header-settings" class="btn-icon-round" title="AI Provider & Model Settings">
-          <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <!-- Right: Sovereign Node Live Telemetry & Quick Action -->
+      <div class="dock-actions">
+        <div class="dock-status-pill hidden md:flex" title="Umbrel Node Active">
+          <span class="dock-status-dot"></span>
+          <span>Local Node Active</span>
+          <span style="opacity: 0.4;">•</span>
+          <span id="header-trip-name" style="color: #ffffff; font-weight: 500; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Kyoto</span>
+        </div>
+        <button id="btn-header-share" class="btn-icon-disc" title="Share & Export">
+          <span class="material-symbols-outlined text-[18px]">share</span>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- MAIN VIEWPORT CONTENT -->
-  <main class="app-main-container">
+  <!-- MAIN APP CONTAINER -->
+  <main class="app-main">
 
-    <!-- HERO TRIP BANNER -->
-    <section class="trip-banner" id="trip-banner">
-      <div class="banner-glass-content">
-        <div class="banner-top-row">
-          <div class="trip-tags-scroll">
-            <span class="chip chip-dest" id="hero-dest">📍 Destination</span>
-            <span class="chip chip-dates" id="hero-dates">📅 Dates</span>
-            <span class="chip chip-travelers" id="hero-travelers">👥 Travelers</span>
-            <span class="chip chip-style" id="hero-style">✨ Vibe</span>
+    <!-- ======================================================================
+         VIEW 1: TRIPS HUB (SPATIAL DIRECTORY)
+         ====================================================================== -->
+    <section id="view-trips-hub" class="tab-view active">
+      <!-- Section Header -->
+      <div class="section-meta-deck">
+        <div class="meta-status-line">
+          <span class="dock-status-dot"></span>
+          <span>Encrypted Spatial Directory</span>
+          <span style="opacity: 0.4;">•</span>
+          <span>Zero-Knowledge Vault</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h1 class="section-title">Trips Hub</h1>
+            <p class="section-subtitle">
+              Self-hosted spatial itineraries, localized offline coordinates, and neural travel intelligence running privately on your Umbrel Node.
+            </p>
           </div>
-
-          <!-- Trip Edit / Delete Action -->
-          <div class="banner-actions">
-            <button id="btn-edit-trip-details" class="btn-micro" title="Edit trip details">
-              <svg viewBox="0 0 24 24" class="micro-svg" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              <span>Edit Details</span>
+          <!-- Action Cluster -->
+          <div class="hub-action-cluster">
+            <button id="btn-hub-new-trip" class="btn-liquid-primary" type="button">
+              <span class="material-symbols-outlined text-[18px]">add</span>
+              <span>New Expedition</span>
+            </button>
+            <button id="btn-hub-import-plan" class="btn-liquid-subtle" type="button">
+              <span class="material-symbols-outlined text-[18px]">polyline</span>
+              <span>Import Plan</span>
+            </button>
+            <button id="btn-hub-sync" class="btn-icon-disc" title="Synchronize Local Cache" type="button">
+              <span class="material-symbols-outlined text-[18px]">sync</span>
             </button>
           </div>
         </div>
+      </div>
 
-        <div class="banner-main-row">
-          <div class="banner-text">
-            <h1 class="trip-title" id="hero-title">Select or Create a Trip</h1>
-            <p class="trip-notes" id="hero-notes">Loading notes...</p>
+      <!-- Featured Active Trip Glass Slab (Dynamic) -->
+      <div id="featured-trip-container">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- All Stored Expeditions Grid -->
+      <div style="margin-top: 40px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-symbols-outlined text-[20px] text-primary">public</span>
+            <h2 style="font-size: 20px; font-weight: 500; color: #ffffff;">Saved Expeditions</h2>
+          </div>
+          <span id="hub-trips-count" style="font-size: 13px; color: var(--text-muted);">Loading trips...</span>
+        </div>
+        <div id="trips-grid" class="trips-directory-grid">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         VIEW 2: AI SPATIAL PLANNER
+         ====================================================================== -->
+    <section id="view-ai-planner" class="tab-view">
+      <!-- AI Planner Header & Model Selector -->
+      <div class="ai-planner-header">
+        <div>
+          <div class="meta-status-line">
+            <span class="dock-status-dot"></span>
+            <span>Neural Synthesis</span>
+            <span style="opacity: 0.4;">•</span>
+            <span id="ai-active-trip-label" style="color: #ffffff;">Kyoto</span>
+          </div>
+          <h1 class="section-title">AI Spatial Planner</h1>
+        </div>
+
+        <!-- Segmented Model Switcher Dock -->
+        <div class="model-switch-dock">
+          <button id="btn-model-local" class="model-pill-btn active" type="button">
+            <span class="material-symbols-outlined text-[16px]">memory</span>
+            <span>Ollama Local</span>
+            <span style="font-size: 10px; text-transform: uppercase; padding: 2px 6px; border-radius: 9999px; background: rgba(255,255,255,0.15);">Node</span>
+          </button>
+          <button id="btn-model-cloud" class="model-pill-btn" type="button">
+            <span class="material-symbols-outlined text-[16px]">cloud</span>
+            <span>Gemini Pro</span>
+            <span style="font-size: 10px; text-transform: uppercase; padding: 2px 6px; border-radius: 9999px; background: rgba(255,255,255,0.15);">Web Search</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Spatial Computing Grid: 2-Column Asymmetric Canvas -->
+      <div class="ai-planner-grid">
+        <!-- Left Column: AI Stream & Recommendations (7 Columns) -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          
+          <!-- Omnibar Input Slab -->
+          <div class="liquid-glass" style="padding: 16px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--water-accent); font-weight: 600; margin-bottom: 8px;">
+              Direct Neural Prompt
+            </div>
+            <div class="liquid-capsule ai-omnibar-slab" style="margin-top: 0;">
+              <span class="material-symbols-outlined text-[20px]" style="color: var(--text-muted); margin-left: 6px;">psychology</span>
+              <input id="ai-omnibar-input" class="omnibar-input" type="text" placeholder="e.g. 'Plan a tranquil afternoon matcha and garden walking tour in Higashiyama with coffee stops'">
+              <button id="btn-ai-query" class="btn-liquid-primary" style="padding: 8px 18px; border-radius: 9999px;" type="button">
+                <span>Inspire Me</span>
+                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+              </button>
+            </div>
+
+            <!-- Quick Inspiration Chips -->
+            <div class="ai-chips-wrap">
+              <button class="ai-chip-btn" data-prompt="Must-see cultural landmarks, tranquil gardens, and historical sanctums">
+                <span class="material-symbols-outlined text-[14px]">nature_people</span>
+                <span>Must-See Sights</span>
+              </button>
+              <button class="ai-chip-btn" data-prompt="Authentic local food, quiet tea sanctuaries, and hidden dining alcoves">
+                <span class="material-symbols-outlined text-[14px]">restaurant_menu</span>
+                <span>Local Food & Dining</span>
+              </button>
+              <button class="ai-chip-btn" data-prompt="Hidden architectural gems, crowd avoidance windows, and scenic walks">
+                <span class="material-symbols-outlined text-[14px]">diamond</span>
+                <span>Hidden Gems</span>
+              </button>
+              <button class="ai-chip-btn" data-prompt="Top traditional accommodations, Hinoki bath ryokans, and boutique hotels">
+                <span class="material-symbols-outlined text-[14px]">hotel</span>
+                <span>Top Lodging</span>
+              </button>
+            </div>
           </div>
 
-          <!-- Weather Chip Widget -->
-          <div class="weather-widget" id="weather-card">
-            <div id="weather-status" class="weather-status-box">Fetching weather...</div>
+          <!-- AI Response / Recommendation Stream Container -->
+          <div id="ai-rec-container">
+            <!-- Dynamic AI Cards rendered here -->
+            <div class="liquid-glass" style="padding: 32px; text-align: center;">
+              <div style="width: 52px; height: 52px; border-radius: 9999px; background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                <span class="material-symbols-outlined text-[28px] text-primary">auto_awesome</span>
+              </div>
+              <h3 style="font-size: 18px; font-weight: 500; color: #ffffff; margin-bottom: 6px;">Ready to Co-Pilot Your Journey</h3>
+              <p style="font-size: 14px; color: var(--text-muted); max-width: 460px; margin: 0 auto 20px;">
+                Ask your sovereign AI to research stops, draft day itineraries, evaluate travel budgets, or explore scenic walking corridors with live web knowledge.
+              </p>
+              <button id="btn-quick-inspire-seed" class="btn-liquid-subtle" type="button">
+                <span>Generate Day Highlights</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Itinerary Day Timetable & Unassigned Wishlist (5 Columns) -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <!-- Day Preview Chamber -->
+          <div class="liquid-glass" style="padding: 24px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 11px; text-transform: uppercase; font-weight: 700; background: rgba(255,255,255,0.15); padding: 2px 8px; border-radius: 9999px; color: #ffffff;">Current Plan</span>
+                <span style="font-size: 16px; font-weight: 600; color: #ffffff;">Day Schedule Preview</span>
+              </div>
+              <button id="btn-ai-switch-to-itinerary" class="btn-liquid-subtle" style="padding: 4px 10px; font-size: 12px;" type="button">
+                <span>View Full Itinerary →</span>
+              </button>
+            </div>
+
+            <!-- Timetable List -->
+            <div id="ai-day-preview-list" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Dynamically populated from active trip items -->
+            </div>
+          </div>
+
+          <!-- Unassigned Wishlist Floating Chamber -->
+          <div class="liquid-glass" style="padding: 24px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px; font-weight: 600; color: #ffffff;">Unassigned Wishlist</span>
+                <span id="ai-wishlist-count" style="font-size: 11px; padding: 2px 8px; border-radius: 9999px; background: rgba(255,255,255,0.08); color: var(--water-accent);">3 Spots</span>
+              </div>
+              <button id="btn-add-wishlist-spot" class="btn-icon-disc" style="width: 30px; height: 30px;" title="Add Wishlist Idea">
+                <span class="material-symbols-outlined text-[16px]">add</span>
+              </button>
+            </div>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px;">
+              Saved points of interest ready to be assigned into specific calendar days.
+            </p>
+
+            <div id="ai-wishlist-container" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Populated dynamically -->
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ==============================================
-         VIEW 1: ITINERARY & MAP (UNIFIED)
-         ============================================== -->
-    <section id="view-itinerary" class="view-panel active">
-      <!-- Controls Toolbar: Day Filters + Add Button + Map Toggle -->
-      <div class="itinerary-toolbar">
-        <!-- Day Filters Scroll -->
-        <div class="day-chips-scroll" id="day-filter-bar">
-          <button class="day-chip active" data-day="all">All Days</button>
+    <!-- ======================================================================
+         VIEW 3: MASTER ITINERARY (DAY TIMELINE & WORKSPACE)
+         ====================================================================== -->
+    <section id="view-master-itinerary" class="tab-view">
+      <!-- Top Floating Meta Deck -->
+      <div class="liquid-glass itinerary-meta-deck">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--water-accent);">
+            <span style="display: flex; align-items: center; gap: 4px; color: #ffffff;">
+              <span class="material-symbols-outlined text-[16px]">place</span>
+              <span id="itinerary-trip-dest">Kyoto, Japan</span>
+            </span>
+            <span style="opacity: 0.4;">•</span>
+            <span id="itinerary-vault-id">Vault ID: #KB-8902</span>
+            <span style="opacity: 0.4;">•</span>
+            <span style="display: flex; align-items: center; gap: 4px; color: var(--emerald-accent);">
+              <span class="dock-status-dot"></span>
+              <span>P2P Sync Armed</span>
+            </span>
+          </div>
+
+          <h1 id="itinerary-trip-title" style="font-size: 28px; font-weight: 500; color: #ffffff; letter-spacing: -0.02em;">
+            Kyoto Cultural & Culinary Journey
+          </h1>
+
+          <div style="display: flex; align-items: center; gap: 16px; font-size: 13.5px; color: var(--text-secondary); margin-top: 2px;">
+            <span id="itinerary-trip-dates">2026-11-10 to 2026-11-15</span>
+            <span style="opacity: 0.4;">•</span>
+            <span id="itinerary-trip-travelers">2 Adults</span>
+            <span style="opacity: 0.4;">•</span>
+            <span id="itinerary-total-stops-badge">4 Curated Stops</span>
+          </div>
         </div>
 
-        <div class="toolbar-actions">
-          <!-- Mobile Map Toggle -->
-          <button id="btn-toggle-map" class="btn-action-subtle" title="Toggle interactive map view">
-            <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
-            <span id="map-toggle-text">Show Map</span>
-          </button>
-
-          <!-- Add Item Button -->
-          <button id="btn-open-add-item" class="btn-primary-gradient">
-            <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <!-- Weather Spatial Pill & Quick Actions -->
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div id="itinerary-weather-badge" class="weather-spatial-pill">
+            <span class="material-symbols-outlined text-[18px]" style="color: var(--amber-accent);">wb_sunny</span>
+            <span>19°C · Crisp Cloudless</span>
+          </div>
+          <button id="btn-itinerary-add-stop" class="btn-liquid-primary" type="button">
+            <span class="material-symbols-outlined text-[18px]">add_circle</span>
             <span>Add Stop</span>
           </button>
         </div>
       </div>
 
-      <!-- Unified Layout: Timeline + Responsive Map -->
-      <div class="itinerary-split-layout" id="itinerary-layout">
-        <!-- Left: Day-by-Day Timeline -->
-        <div class="timeline-column" id="timeline-column">
-          <div id="timeline-cards-container" class="timeline-cards-container">
-            <!-- Dynamically populated with day groups and cards -->
+      <!-- Floating Glass Day Selector Dock -->
+      <div id="itinerary-day-selector" class="day-selector-dock">
+        <!-- Rendered dynamically by app.js: All Days, Day 1, Day 2... -->
+      </div>
+
+      <!-- Main Itinerary Spatial Workspace Grid -->
+      <div class="itinerary-workspace-grid">
+        <!-- LEFT COLUMN: Spatial Timeline (7 Columns) -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <!-- Timeline Container -->
+          <div class="timeline-flow-container">
+            <div class="timeline-step-line"></div>
+            <div id="timeline-items-container">
+              <!-- Rendered dynamically by app.js -->
+            </div>
           </div>
         </div>
 
-        <!-- Right: Interactive Leaflet Map Container -->
-        <div class="map-column" id="map-column">
-          <div class="map-card-wrapper">
-            <div class="map-header-bar">
-              <div class="map-title-group">
-                <span class="map-dot"></span>
-                <strong>Trip Route & Sights Map</strong>
+        <!-- RIGHT COLUMN: Interactive Leaflet Map & Packing / Budget (5 Columns) -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          
+          <!-- Interactive Spatial Map Chamber -->
+          <div class="map-spatial-chamber">
+            <div id="map-container"></div>
+          </div>
+
+          <!-- Packing Checklist Widget -->
+          <div class="liquid-glass packing-checklist-widget">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="material-symbols-outlined text-[20px] text-primary">luggage</span>
+                <span style="font-size: 16px; font-weight: 600; color: #ffffff;">Packing Checklist</span>
               </div>
-              <span class="map-attribution-badge">OpenStreetMap</span>
+              <span id="packing-progress-ratio" style="font-size: 12px; padding: 2px 8px; border-radius: 9999px; background: rgba(255,255,255,0.08); color: var(--water-accent);">
+                0 / 0 Packed
+              </span>
             </div>
-            <div id="trip-map" class="leaflet-map-canvas"></div>
+
+            <!-- Add Item Input Form -->
+            <form id="form-add-pack-item" style="display: flex; gap: 8px;">
+              <input id="input-pack-item-name" class="liquid-input" style="padding: 8px 12px; font-size: 13px;" type="text" placeholder="Add item (e.g. Passport, Adapters)..." required>
+              <button class="btn-liquid-primary" style="padding: 8px 16px; border-radius: var(--radius-sm);" type="submit">Add</button>
+            </form>
+
+            <!-- Packing Items List -->
+            <div id="packing-items-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto;">
+              <!-- Dynamic packing items -->
+            </div>
           </div>
+
+          <!-- Node Budget & Expense Breakdown -->
+          <div class="liquid-glass" style="padding: 24px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="material-symbols-outlined text-[20px] text-primary">payments</span>
+                <span style="font-size: 16px; font-weight: 600; color: #ffffff;">Node Budget & Expenses</span>
+              </div>
+              <span id="budget-currency-label" style="font-size: 12px; color: var(--text-muted);">USD</span>
+            </div>
+
+            <div class="spatial-metrics-grid" style="margin: 0 0 16px 0;">
+              <div class="metric-liquid-tile">
+                <span class="metric-label">Target Budget</span>
+                <span id="budget-total-display" class="metric-value">$3,500</span>
+              </div>
+              <div class="metric-liquid-tile">
+                <span class="metric-label">Total Spent</span>
+                <span id="budget-spent-display" class="metric-value">$0</span>
+              </div>
+              <div class="metric-liquid-tile">
+                <span class="metric-label">Remaining</span>
+                <span id="budget-remaining-display" class="metric-value" style="color: var(--emerald-accent);">$3,500</span>
+              </div>
+            </div>
+
+            <div class="metric-progress-track">
+              <div id="budget-progress-bar" class="metric-progress-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
 
-    <!-- ==============================================
-         VIEW 2: AI CO-PILOT
-         ============================================== -->
-    <section id="view-ai" class="view-panel">
-      <div class="ai-assistant-container">
-        <!-- Assistant Hero Card -->
-        <div class="ai-banner-card">
-          <div class="ai-banner-left">
-            <div class="ai-pulse-orb">
-              <svg viewBox="0 0 24 24" class="orb-svg" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-            </div>
-            <div>
-              <h2 class="ai-hero-title">AI Voyage Co-Pilot</h2>
-              <p class="ai-hero-subtitle" id="ai-active-provider-label">Grounded with real-time web discovery</p>
-            </div>
-          </div>
-
-          <div class="ai-banner-right">
-            <span class="model-pill" id="badge-ai-model">Gemini 3.8 Flash</span>
-            <button id="btn-hero-import-plan" class="btn-action-subtle">
-              <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              <span>Import Plan</span>
-            </button>
-          </div>
+    <!-- ======================================================================
+         VIEW 4: SYSTEM SETTINGS (ENGINE TOPOLOGY)
+         ====================================================================== -->
+    <section id="view-system-settings" class="tab-view">
+      <div class="section-meta-deck">
+        <div class="meta-status-line">
+          <span class="dock-status-dot"></span>
+          <span>Sovereign Node Topology</span>
+          <span style="opacity: 0.4;">•</span>
+          <span>Private Telemetry</span>
         </div>
-
-        <!-- Quick Inspiration Pills -->
-        <div class="ai-prompt-shortcuts">
-          <button class="ai-shortcut-chip" data-prompt="Find top 5 must-visit iconic landmarks and scenic photo spots">📸 Must-See Highlights</button>
-          <button class="ai-shortcut-chip" data-prompt="Best authentic food, street markets, local cafes, and dinner gems">🍜 Authentic Dining</button>
-          <button class="ai-shortcut-chip" data-prompt="Peaceful hidden gems, quiet neighborhood walks, and secret views">💎 Hidden Gems</button>
-          <button class="ai-shortcut-chip" data-prompt="Top boutique stays, centrally located hotels, and charming places to stay">🏨 Accommodations</button>
-          <button class="ai-shortcut-chip" data-prompt="Best day trip excursions nearby with travel transit tips">🚆 Day Trips</button>
-        </div>
-
-        <!-- Search / Prompt Input Bar -->
-        <div class="ai-input-bar">
-          <div class="ai-input-field-wrap">
-            <svg viewBox="0 0 24 24" class="search-svg" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="ai-custom-prompt" placeholder="Ask AI: e.g. '3-day foodie walk in Kyoto' or 'Quiet evening spots'..." class="ai-input">
-          </div>
-          <button id="btn-generate-ai" class="btn-primary-gradient btn-ai-send">
-            <span id="ai-btn-text">Generate Ideas</span>
-            <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
-
-        <!-- Results Stream Container -->
-        <div id="ai-results-container" class="ai-results-grid">
-          <div class="ai-empty-state">
-            <div class="empty-icon-circle">✨</div>
-            <h3>Ready to craft your journey</h3>
-            <p>Select any shortcut above or type a custom request to generate curated travel ideas with live web grounding.</p>
-          </div>
-        </div>
+        <h1 class="section-title">System & Engine Topology</h1>
+        <p class="section-subtitle">
+          Umbrel OS Sovereign Travel Suite — Local LLM pipeline, encrypted zero-knowledge storage, and private telemetry.
+        </p>
       </div>
-    </section>
 
-    <!-- ==============================================
-         VIEW 3: PACKING CHECKLIST
-         ============================================== -->
-    <section id="view-packing" class="view-panel">
-      <div class="tool-content-max">
-        <!-- Packing Overview Card -->
-        <div class="card-glass packing-header-card">
-          <div class="packing-header-top">
-            <div>
-              <h2 class="section-title">Packing Checklist</h2>
-              <p class="section-subtitle" id="packing-progress-label">0 of 0 items packed</p>
+      <div class="settings-spatial-grid">
+        <!-- Left: Intelligence Engines Config -->
+        <div class="liquid-glass settings-card-slab">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="material-symbols-outlined text-[24px] text-primary">smart_toy</span>
+              <div>
+                <h2 style="font-size: 17px; font-weight: 600; color: #ffffff;">Local Ollama Runtime</h2>
+                <p style="font-size: 12.5px; color: var(--text-muted);">Self-contained neural weight orchestration on your Umbrel host</p>
+              </div>
             </div>
-            <button id="btn-auto-pack" class="btn-secondary-glow">
-              <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              <span>AI Smart Pack</span>
-            </button>
+            <span class="dock-status-pill" style="font-size: 11px;">Loaded to VRAM</span>
           </div>
 
-          <!-- Progress Bar -->
-          <div class="progress-track">
-            <div id="packing-progress-bar" class="progress-fill" style="width: 0%"></div>
+          <div class="form-group-field">
+            <label class="form-label-title" for="input-ollama-url">Ollama Host URL</label>
+            <input id="input-ollama-url" class="liquid-input" type="text" value="http://umbrel.local:11434" placeholder="http://10.21.0.1:11434">
+            <span class="form-field-desc">Default Umbrel Ollama endpoint or internal gateway IP</span>
           </div>
 
-          <!-- Category Filter Bar -->
-          <div class="pack-filter-row">
-            <button class="pack-filter-btn active" data-pack-filter="all">All</button>
-            <button class="pack-filter-btn" data-pack-filter="Documents">Documents</button>
-            <button class="pack-filter-btn" data-pack-filter="Clothing">Clothing</button>
-            <button class="pack-filter-btn" data-pack-filter="Electronics">Electronics</button>
-            <button class="pack-filter-btn" data-pack-filter="Toiletries">Toiletries</button>
-            <button class="pack-filter-btn" data-pack-filter="Gear">Gear</button>
-          </div>
-        </div>
-
-        <!-- Quick Add Packing Row -->
-        <form id="form-quick-pack" class="quick-add-bar">
-          <input type="text" id="pack-input-text" placeholder="Add custom item (e.g. Passport, universal adapter, walking shoes)..." class="input-base flex-3" required>
-          <select id="pack-input-category" class="select-base flex-1">
-            <option value="Documents">📄 Documents</option>
-            <option value="Clothing">👕 Clothing</option>
-            <option value="Electronics">🔌 Electronics</option>
-            <option value="Toiletries">🧴 Toiletries</option>
-            <option value="Gear">🎒 Gear</option>
-            <option value="Health">💊 Health</option>
-          </select>
-          <button type="submit" class="btn-primary-gradient">Add</button>
-        </form>
-
-        <!-- Packing Items List -->
-        <ul id="packing-list-items" class="checklist-grid">
-          <!-- Dynamically populated -->
-        </ul>
-      </div>
-    </section>
-
-    <!-- ==============================================
-         VIEW 4: BUDGET & EXPENSES
-         ============================================== -->
-    <section id="view-budget" class="view-panel">
-      <div class="tool-content-max">
-        <!-- Budget Financial Dashboard Cards -->
-        <div class="budget-stat-grid">
-          <div class="stat-card">
-            <span class="stat-meta">Target Budget</span>
-            <span class="stat-value" id="budget-target-val">$0</span>
-            <span class="stat-sub" id="budget-target-currency">Set in trip details</span>
-          </div>
-
-          <div class="stat-card">
-            <span class="stat-meta">Total Spent</span>
-            <span class="stat-value text-indigo" id="budget-spent-val">$0</span>
-            <span class="stat-sub" id="budget-spent-pct">0% of total budget</span>
-          </div>
-
-          <div class="stat-card">
-            <span class="stat-meta">Remaining</span>
-            <span class="stat-value text-emerald" id="budget-remain-val">$0</span>
-            <span class="stat-sub" id="budget-remain-status">On Track</span>
-          </div>
-        </div>
-
-        <!-- Log Expense Form Card -->
-        <div class="card-glass">
-          <div class="card-head-simple">
-            <h3>Log an Expense</h3>
-          </div>
-          <form id="form-quick-expense" class="quick-expense-form">
-            <input type="text" id="exp-input-title" placeholder="Description (e.g. Flight, Shinkansen, Dinner)..." class="input-base flex-2" required>
-            <select id="exp-input-category" class="select-base flex-1">
-              <option value="Flights">✈️ Flights</option>
-              <option value="Hotels">🏨 Hotels</option>
-              <option value="Food">🍽️ Food</option>
-              <option value="Activities">🎯 Activities</option>
-              <option value="Transit">🚆 Transit</option>
-              <option value="Shopping">🛍️ Shopping</option>
-              <option value="Other">📦 Other</option>
+          <div class="form-group-field">
+            <label class="form-label-title" for="select-ollama-model">Active Model Checkpoint</label>
+            <select id="select-ollama-model" class="liquid-input">
+              <option value="llama3:latest">Llama 3 / 3.1 8B Instruct (Meta AI • Recommended)</option>
+              <option value="mistral:latest">Mistral NeMo 12B Instruct (128k context)</option>
+              <option value="phi3:latest">Phi-3 Mini Instruct (Fast Speculative)</option>
+              <option value="gemma2:latest">Gemma 2 9B (Google DeepMind)</option>
             </select>
-            <input type="number" id="exp-input-amount" placeholder="Amount" class="input-base flex-1" min="0" step="any" required>
-            <button type="submit" class="btn-primary-gradient">Log Expense</button>
-          </form>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title">
+              <span>Spatial Context Window</span>
+              <span id="display-context-window" style="color: var(--water-accent);">16,384 tokens</span>
+            </label>
+            <input id="slider-context-window" class="liquid-range-slider" type="range" min="4096" max="32768" step="2048" value="16384">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+              <span>4k Minimum</span>
+              <span>16k Recommended</span>
+              <span>32k Max KV Cache</span>
+            </div>
+          </div>
+
+          <div class="form-group-field">
+            <label class="form-label-title">
+              <span>Sampling Temperature</span>
+              <span id="display-temperature" style="color: var(--water-accent);">0.35 (Analytical)</span>
+            </label>
+            <input id="slider-temperature" class="liquid-range-slider" type="range" min="0" max="1" step="0.05" value="0.35">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+              <span>0.0 Deterministic</span>
+              <span>0.4 Precise Itineraries</span>
+              <span>1.0 Divergent Discovery</span>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+              <span class="material-symbols-outlined text-[22px] text-primary">cloud</span>
+              <div>
+                <h3 style="font-size: 16px; font-weight: 600; color: #ffffff;">Cloud Gemini Engine & Live Web</h3>
+                <p style="font-size: 12px; color: var(--text-muted);">High-precision Google Gemini with live web grounding</p>
+              </div>
+            </div>
+
+            <div class="form-group-field">
+              <label class="form-label-title" for="input-gemini-key">Google Gemini API Key</label>
+              <input id="input-gemini-key" class="liquid-input" type="password" placeholder="AIzaSy...">
+              <span class="form-field-desc">Optional: Leave blank to run 100% offline via local Ollama</span>
+            </div>
+
+            <div class="form-group-field" style="margin-top: 12px;">
+              <label class="form-label-title" for="select-gemini-model">Gemini Model</label>
+              <select id="select-gemini-model" class="liquid-input">
+                <option value="gemini-3.8-flash">gemini-3.8-flash (Latest, Ultra Fast)</option>
+                <option value="gemini-1.5-pro">gemini-1.5-pro (Extended Depth)</option>
+                <option value="gemini-1.5-flash">gemini-1.5-flash (Balanced)</option>
+              </select>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 12px 16px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);">
+              <div>
+                <div style="font-size: 13.5px; font-weight: 500; color: #ffffff;">Live Web Search Grounding</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);">Retrieve real-time restaurant menus, current hours, and seasonal foliage dates</div>
+              </div>
+              <input id="toggle-web-search" class="pack-checkbox" type="checkbox" checked>
+            </div>
+          </div>
+
+          <div style="padding-top: 12px;">
+            <button id="btn-save-settings" class="btn-liquid-primary" style="width: 100%;" type="button">
+              <span class="material-symbols-outlined text-[18px]">save</span>
+              <span>Save System Settings</span>
+            </button>
+          </div>
         </div>
 
-        <!-- Logged Expenses List -->
-        <div class="card-glass mt-20">
-          <div class="card-head-simple">
-            <h3>Logged Expenses</h3>
+        <!-- Right: Sovereign Node Encrypted Vault -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <div class="liquid-glass settings-card-slab">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="material-symbols-outlined text-[24px] text-primary">lock</span>
+              <div>
+                <h2 style="font-size: 17px; font-weight: 600; color: #ffffff;">Encrypted Vault Storage</h2>
+                <p style="font-size: 12.5px; color: var(--text-muted);">All voyage data stays exclusively on your Umbrel node</p>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+              <button id="btn-export-vault" class="btn-liquid-subtle" style="justify-content: flex-start;" type="button">
+                <span class="material-symbols-outlined text-[18px]">download</span>
+                <span>Download Sovereign Backup (JSON)</span>
+              </button>
+
+              <button id="btn-trigger-import-vault" class="btn-liquid-subtle" style="justify-content: flex-start;" type="button">
+                <span class="material-symbols-outlined text-[18px]">upload</span>
+                <span>Restore Backup File</span>
+              </button>
+              <input id="input-vault-file" type="file" accept=".json" style="display: none;">
+
+              <button id="btn-reset-vault" class="btn-liquid-subtle" style="justify-content: flex-start; color: var(--rose-accent);" type="button">
+                <span class="material-symbols-outlined text-[18px]">delete_forever</span>
+                <span>Clear & Reset Database</span>
+              </button>
+            </div>
           </div>
-          <ul id="expense-list-items" class="expense-list">
-            <!-- Dynamically populated -->
-          </ul>
+
+          <!-- Node Telemetry Capsule -->
+          <div class="liquid-capsule" style="padding: 24px;">
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--water-accent); font-weight: 600; margin-bottom: 8px;">
+              Host Node Diagnostics
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Umbrel Gateway</span>
+                <span style="color: #ffffff; font-family: monospace;">10.21.0.1</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Database Location</span>
+                <span style="color: #ffffff; font-family: monospace;">/data/voyage.json</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Architecture</span>
+                <span style="color: #ffffff;">Multi-Arch (x86_64 / arm64)</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Sovereign Encryption</span>
+                <span style="color: var(--emerald-accent);">TLS + Local Node</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- MOBILE BOTTOM NAVIGATION (THUMB FRIENDLY) -->
-  <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
-    <button class="mobile-nav-btn active" data-tab="itinerary">
-      <svg viewBox="0 0 24 24" class="mob-svg" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span>Itinerary</span>
+  <!-- FLOATING MOBILE BOTTOM NAVIGATION DOCK -->
+  <nav class="mobile-bottom-dock" role="tablist">
+    <button class="mobile-dock-btn active" data-tab="trips-hub" role="tab">
+      <span class="material-symbols-outlined text-[20px]">folder_special</span>
+      <span>Hub</span>
     </button>
-    <button class="mobile-nav-btn" data-tab="ai">
-      <svg viewBox="0 0 24 24" class="mob-svg" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    <button class="mobile-dock-btn" data-tab="ai-planner" role="tab">
+      <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
       <span>AI Plan</span>
     </button>
-    <button class="mobile-nav-btn" data-tab="packing">
-      <svg viewBox="0 0 24 24" class="mob-svg" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-      <span>Packing</span>
+    <button class="mobile-dock-btn" data-tab="master-itinerary" role="tab">
+      <span class="material-symbols-outlined text-[20px]">map</span>
+      <span>Itinerary</span>
     </button>
-    <button class="mobile-nav-btn" data-tab="budget">
-      <svg viewBox="0 0 24 24" class="mob-svg" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      <span>Budget</span>
+    <button class="mobile-dock-btn" data-tab="system-settings" role="tab">
+      <span class="material-symbols-outlined text-[20px]">tune</span>
+      <span>Settings</span>
     </button>
   </nav>
 
-  <!-- MOBILE FLOATING ACTION BUTTON (QUICK ADD STOP) -->
-  <button id="mobile-fab-add" class="mobile-fab" title="Add Itinerary Stop" aria-label="Add Itinerary Stop">
-    <svg viewBox="0 0 24 24" class="fab-svg" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-  </button>
-
-
-  <!-- ==============================================
-       MODALS
-       ============================================== -->
-
-  <!-- MODAL: ADD / EDIT ITINERARY ITEM -->
-  <div id="modal-item" class="modal-backdrop">
-    <div class="modal-sheet">
-      <div class="modal-sheet-handle"></div>
-      <div class="modal-header">
-        <h3 id="modal-item-heading">Add Itinerary Stop</h3>
-        <button class="modal-close-btn" data-close="modal-item">✕</button>
+  <!-- ======================================================================
+       MODAL: CREATE NEW EXPEDITION
+       ====================================================================== -->
+  <div id="modal-new-trip" class="modal-backdrop">
+    <div class="liquid-glass modal-sheet">
+      <div class="modal-sheet-header">
+        <h2 class="modal-title">New Expedition</h2>
+        <button class="btn-icon-disc btn-modal-close" type="button">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
       </div>
-      <form id="form-item-submit" class="modal-body">
-        <input type="hidden" id="item-form-id">
-        
-        <div class="form-group">
-          <label for="item-title">Title *</label>
-          <input type="text" id="item-title" placeholder="e.g. Flight NH 112, Hotel Kanra, Tsukiji Fish Market" class="input-base" required>
+
+      <form id="form-new-trip" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="form-group-field">
+          <label class="form-label-title" for="input-new-trip-title">Expedition Title</label>
+          <input id="input-new-trip-title" class="liquid-input" type="text" placeholder="e.g. Kyoto Cultural & Culinary Journey" required>
         </div>
 
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label for="item-category">Category</label>
-            <select id="item-category" class="select-base">
-              <option value="activity">🎯 Activity / Sights</option>
-              <option value="food">🍽️ Food & Dining</option>
-              <option value="hotel">🏨 Hotel & Lodging</option>
-              <option value="flight">✈️ Flight / Transit</option>
-              <option value="note">📝 Note / Info</option>
-            </select>
-          </div>
+        <div class="form-group-field">
+          <label class="form-label-title" for="input-new-trip-dest">Destination Coordinates</label>
+          <input id="input-new-trip-dest" class="liquid-input" type="text" placeholder="e.g. Kyoto, Japan" required>
+        </div>
 
-          <div class="form-group">
-            <label for="item-day">Day #</label>
-            <input type="number" id="item-day" min="1" value="1" class="input-base" required>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group-field">
+            <label class="form-label-title" for="input-new-trip-start">Start Date</label>
+            <input id="input-new-trip-start" class="liquid-input" type="date" required>
+          </div>
+          <div class="form-group-field">
+            <label class="form-label-title" for="input-new-trip-end">End Date</label>
+            <input id="input-new-trip-end" class="liquid-input" type="date" required>
           </div>
         </div>
 
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label for="item-timeblock">Time Block</label>
-            <select id="item-timeblock" class="select-base">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group-field">
+            <label class="form-label-title" for="input-new-trip-travelers">Companions</label>
+            <input id="input-new-trip-travelers" class="liquid-input" type="text" placeholder="e.g. 2 Adults" value="2 Adults">
+          </div>
+          <div class="form-group-field">
+            <label class="form-label-title" for="input-new-trip-budget">Target Budget (USD)</label>
+            <input id="input-new-trip-budget" class="liquid-input" type="number" placeholder="e.g. 3500" value="3500">
+          </div>
+        </div>
+
+        <div class="form-group-field">
+          <label class="form-label-title" for="input-new-trip-notes">Expedition Brief & Notes</label>
+          <textarea id="input-new-trip-notes" class="liquid-input" rows="2" placeholder="e.g. JR Rail Pass activated. Pocket WiFi reserved at KIX airport."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 8px;">
+          <button class="btn-liquid-subtle btn-modal-close" style="flex: 1;" type="button">Cancel</button>
+          <button class="btn-liquid-primary" style="flex: 2;" type="submit">Create Expedition</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: ADD / EDIT ITINERARY STOP
+       ====================================================================== -->
+  <div id="modal-stop-item" class="modal-backdrop">
+    <div class="liquid-glass modal-sheet">
+      <div class="modal-sheet-header">
+        <h2 id="modal-stop-title" class="modal-title">Add Stop to Itinerary</h2>
+        <button class="btn-icon-disc btn-modal-close" type="button">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+
+      <form id="form-stop-item" style="display: flex; flex-direction: column; gap: 14px;">
+        <input id="input-stop-id" type="hidden">
+
+        <div class="form-group-field">
+          <label class="form-label-title" for="input-stop-title">Stop Title</label>
+          <input id="input-stop-title" class="liquid-input" type="text" placeholder="e.g. Kiyomizu-dera Dawn Ascent" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group-field">
+            <label class="form-label-title" for="input-stop-day">Calendar Day #</label>
+            <input id="input-stop-day" class="liquid-input" type="number" min="1" max="60" value="1" required>
+          </div>
+          <div class="form-group-field">
+            <label class="form-label-title" for="select-stop-timeblock">Time Block</label>
+            <select id="select-stop-timeblock" class="liquid-input">
               <option value="morning">Morning</option>
               <option value="afternoon">Afternoon</option>
               <option value="evening">Evening</option>
               <option value="night">Night</option>
             </select>
           </div>
-
-          <div class="form-group">
-            <label for="item-time">Approx Time</label>
-            <input type="time" id="item-time" value="10:00" class="input-base">
-          </div>
         </div>
 
-        <div class="form-group">
-          <label for="item-location">Location / Landmark</label>
-          <input type="text" id="item-location" placeholder="e.g. Pontocho, Nakagyo Ward, Kyoto" class="input-base">
-        </div>
-
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label for="item-website">Website URL (optional)</label>
-            <input type="url" id="item-website" placeholder="https://..." class="input-base">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group-field">
+            <label class="form-label-title" for="input-stop-time">Approx Time</label>
+            <input id="input-stop-time" class="liquid-input" type="time" value="09:00">
           </div>
-          <div class="form-group">
-            <label for="item-cost">Est. Cost</label>
-            <input type="number" id="item-cost" placeholder="0" class="input-base">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="item-notes">Notes & Tips</label>
-          <textarea id="item-notes" rows="2" placeholder="Confirmation #, reservation info, booking tips..." class="input-base"></textarea>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" id="btn-delete-item" class="btn-danger-outline" style="display:none;">Delete Stop</button>
-          <div class="footer-right-buttons">
-            <button type="button" class="btn-subtle" data-close="modal-item">Cancel</button>
-            <button type="submit" id="btn-submit-item-text" class="btn-primary-gradient">Save Stop</button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: CREATE NEW TRIP -->
-  <div id="modal-new-trip" class="modal-backdrop">
-    <div class="modal-sheet">
-      <div class="modal-sheet-handle"></div>
-      <div class="modal-header">
-        <h3>Create New Voyage</h3>
-        <button class="modal-close-btn" data-close="modal-new-trip">✕</button>
-      </div>
-      <form id="form-create-trip" class="modal-body">
-        <div class="form-group">
-          <label for="trip-destination">Destination *</label>
-          <input type="text" id="trip-destination" placeholder="e.g. Tokyo, Japan or Amalfi Coast, Italy" class="input-base" required>
-        </div>
-
-        <div class="form-group">
-          <label for="trip-name">Trip Title (optional)</label>
-          <input type="text" id="trip-name" placeholder="e.g. Tokyo Autumn Culinary Expedition" class="input-base">
-        </div>
-
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label for="trip-start">Start Date</label>
-            <input type="date" id="trip-start" class="input-base">
-          </div>
-          <div class="form-group">
-            <label for="trip-end">End Date</label>
-            <input type="date" id="trip-end" class="input-base">
-          </div>
-        </div>
-
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label for="trip-travelers">Travelers</label>
-            <input type="text" id="trip-travelers" value="2 Adults" class="input-base">
-          </div>
-          <div class="form-group">
-            <label for="trip-style">Vibe / Style</label>
-            <input type="text" id="trip-style" value="Culture & Food" class="input-base">
-          </div>
-        </div>
-
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label for="trip-budget">Target Budget</label>
-            <input type="number" id="trip-budget" value="2500" class="input-base">
-          </div>
-          <div class="form-group">
-            <label for="trip-currency">Currency</label>
-            <select id="trip-currency" class="select-base">
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="JPY">JPY (¥)</option>
-              <option value="CAD">CAD ($)</option>
-              <option value="AUD">AUD ($)</option>
+          <div class="form-group-field">
+            <label class="form-label-title" for="select-stop-category">Category</label>
+            <select id="select-stop-category" class="liquid-input">
+              <option value="sight">Activity / Sight</option>
+              <option value="food">Dining / Cafe</option>
+              <option value="lodging">Hotel / Ryokan</option>
+              <option value="flight">Flight / Transit</option>
+              <option value="shopping">Shopping</option>
+              <option value="other">Other</option>
             </select>
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="trip-notes-input">Trip Notes</label>
-          <textarea id="trip-notes-input" rows="2" placeholder="Flight constraints, travel goals, passport reminders..." class="input-base"></textarea>
+        <div class="form-group-field">
+          <label class="form-label-title" for="input-stop-location">Location / Landmark Address</label>
+          <input id="input-stop-location" class="liquid-input" type="text" placeholder="e.g. 1-294 Kiyomizu, Higashiyama Ward, Kyoto">
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn-subtle" data-close="modal-new-trip">Cancel</button>
-          <button type="submit" class="btn-primary-gradient">Create Trip</button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group-field">
+            <label class="form-label-title" for="input-stop-cost">Est. Cost (USD)</label>
+            <input id="input-stop-cost" class="liquid-input" type="number" value="0">
+          </div>
+          <div class="form-group-field">
+            <label class="form-label-title" for="input-stop-url">Website URL</label>
+            <input id="input-stop-url" class="liquid-input" type="url" placeholder="https://...">
+          </div>
+        </div>
+
+        <div class="form-group-field">
+          <label class="form-label-title" for="input-stop-notes">Notes & Waypoint Details</label>
+          <textarea id="input-stop-notes" class="liquid-input" rows="2" placeholder="e.g. Crowd avoidance window, Hinoki bath reservation, ticket confirmations..."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 8px;">
+          <button class="btn-liquid-subtle btn-modal-close" style="flex: 1;" type="button">Cancel</button>
+          <button class="btn-liquid-primary" style="flex: 2;" type="submit">Commit to Itinerary</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: EDIT ACTIVE TRIP DETAILS -->
-  <div id="modal-edit-trip" class="modal-backdrop">
-    <div class="modal-sheet">
-      <div class="modal-sheet-handle"></div>
-      <div class="modal-header">
-        <h3>Edit Trip Details</h3>
-        <button class="modal-close-btn" data-close="modal-edit-trip">✕</button>
-      </div>
-      <form id="form-edit-trip" class="modal-body">
-        <div class="form-group">
-          <label for="edit-trip-destination">Destination *</label>
-          <input type="text" id="edit-trip-destination" class="input-base" required>
-        </div>
-
-        <div class="form-group">
-          <label for="edit-trip-title">Title</label>
-          <input type="text" id="edit-trip-title" class="input-base">
-        </div>
-
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label for="edit-trip-start">Start Date</label>
-            <input type="date" id="edit-trip-start" class="input-base">
-          </div>
-          <div class="form-group">
-            <label for="edit-trip-end">End Date</label>
-            <input type="date" id="edit-trip-end" class="input-base">
-          </div>
-        </div>
-
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label for="edit-trip-travelers">Travelers</label>
-            <input type="text" id="edit-trip-travelers" class="input-base">
-          </div>
-          <div class="form-group">
-            <label for="edit-trip-style">Vibe / Style</label>
-            <input type="text" id="edit-trip-style" class="input-base">
-          </div>
-        </div>
-
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label for="edit-trip-budget">Target Budget</label>
-            <input type="number" id="edit-trip-budget" class="input-base">
-          </div>
-          <div class="form-group">
-            <label for="edit-trip-currency">Currency</label>
-            <select id="edit-trip-currency" class="select-base">
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="JPY">JPY (¥)</option>
-              <option value="CAD">CAD ($)</option>
-              <option value="AUD">AUD ($)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="edit-trip-notes">Notes</label>
-          <textarea id="edit-trip-notes" rows="2" class="input-base"></textarea>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" id="btn-delete-active-trip" class="btn-danger-outline">Delete Trip</button>
-          <div class="footer-right-buttons">
-            <button type="button" class="btn-subtle" data-close="modal-edit-trip">Cancel</button>
-            <button type="submit" class="btn-primary-gradient">Save Changes</button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: IMPORT PLAN WITH AI -->
+  <!-- ======================================================================
+       MODAL: AI IMPORT PLAN OR GPX
+       ====================================================================== -->
   <div id="modal-import-plan" class="modal-backdrop">
-    <div class="modal-sheet">
-      <div class="modal-sheet-handle"></div>
-      <div class="modal-header">
-        <div class="modal-title-with-icon">
-          <span class="icon-orb">📋</span>
-          <div>
-            <h3>Paste & Import Travel Plan</h3>
-            <p class="modal-subtitle">AI extracts destinations, days, and places from messy emails or text.</p>
-          </div>
-        </div>
-        <button class="modal-close-btn" data-close="modal-import-plan">✕</button>
+    <div class="liquid-glass modal-sheet">
+      <div class="modal-sheet-header">
+        <h2 class="modal-title">AI Import Plan</h2>
+        <button class="btn-icon-disc btn-modal-close" type="button">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
       </div>
-      <form id="form-import-plan" class="modal-body">
-        <div class="form-group">
-          <label for="import-plan-text">Paste Existing Plan / Notes *</label>
-          <textarea id="import-plan-text" rows="7" placeholder="Paste your itinerary here... For example:
 
-Day 1: Arrive in Paris 10:30am on flight AF 007. Check into Hotel Le Marais. Lunch at Cafe de Flore. Afternoon visit to the Louvre.
-Day 2: Morning visit to Versailles Palace. Dinner at Le Relais.
-Flight home on Sunday 4pm." class="input-base" required></textarea>
+      <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px;">
+        Paste any unformatted travel itinerary, flight confirmations, hotel bookings, or notes. Your AI will parse dates, locations, timings, and stops into a structured itinerary.
+      </p>
+
+      <form id="form-import-plan" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="form-group-field">
+          <label class="form-label-title" for="textarea-import-raw">Raw Plan or Notes</label>
+          <textarea id="textarea-import-raw" class="liquid-input" rows="6" placeholder="e.g. Flight lands at KIX 9am. Check in at Gion Hatanaka Ryokan. Dinner at Men-ya Inoichi. Day 2: Morning visit to Fushimi Inari, lunch at Arashiyama..." required></textarea>
         </div>
 
-        <div class="form-group">
-          <label>Import Target</label>
-          <div class="segmented-radio-group">
-            <label class="segmented-radio-item">
-              <input type="radio" name="import-mode" value="new" checked>
-              <div class="segmented-card">
-                <strong>Create New Trip</strong>
-                <span>Creates a brand new trip with extracted dates</span>
-              </div>
-            </label>
-            <label class="segmented-radio-item">
-              <input type="radio" name="import-mode" value="current">
-              <div class="segmented-card">
-                <strong>Append to Current Trip</strong>
-                <span id="import-current-trip-name">Add to active trip</span>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <div id="import-status-box" class="callout-box" style="display:none;"></div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn-subtle" data-close="modal-import-plan">Cancel</button>
-          <button type="submit" id="btn-submit-import" class="btn-primary-gradient">✨ Convert & Import</button>
+        <div style="display: flex; gap: 12px;">
+          <button class="btn-liquid-subtle btn-modal-close" style="flex: 1;" type="button">Cancel</button>
+          <button id="btn-submit-import" class="btn-liquid-primary" style="flex: 2;" type="submit">
+            <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+            <span>Synthesize into Itinerary</span>
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: SHARE & EXPORT -->
+  <!-- ======================================================================
+       MODAL: SHARE LINK & EXPORT
+       ====================================================================== -->
   <div id="modal-share" class="modal-backdrop">
-    <div class="modal-sheet">
-      <div class="modal-sheet-handle"></div>
-      <div class="modal-header">
-        <h3>Share & Export Trip</h3>
-        <button class="modal-close-btn" data-close="modal-share">✕</button>
+    <div class="liquid-glass modal-sheet">
+      <div class="modal-sheet-header">
+        <h2 class="modal-title">Share & Sovereign Export</h2>
+        <button class="btn-icon-disc btn-modal-close" type="button">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
       </div>
-      <div class="modal-body">
-        <p class="modal-explainer">Share your live itinerary with travel partners. Anyone with the secret link can view on their phone without an Umbrel account.</p>
 
-        <!-- Public Link Input Box -->
-        <div class="form-group">
-          <label>Secret Guest View Link</label>
-          <div class="copy-action-bar">
-            <input type="text" id="share-link-input" readonly class="input-base">
-            <button id="btn-copy-share-link" class="btn-secondary-glow">Copy</button>
-          </div>
-          <span class="input-hint">Live read-only access. Auto-updates when you make changes.</span>
-        </div>
+      <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px;">
+        Share a secure view-only link with travel companions or download a zero-knowledge offline JSON archive.
+      </p>
 
-        <div class="divider-subtle"></div>
-
-        <!-- Offline & Calendar Exports -->
-        <div class="export-cards-grid">
-          <a id="btn-export-html" class="export-action-card" download>
-            <div class="export-card-icon">📄</div>
-            <div class="export-card-info">
-              <strong>Offline Travel Guide (.html)</strong>
-              <span>Standalone HTML file to save on your phone for flights without WiFi</span>
-            </div>
-            <div class="export-card-arrow">↓</div>
-          </a>
-
-          <a id="btn-export-ics" class="export-action-card" download>
-            <div class="export-card-icon">📅</div>
-            <div class="export-card-info">
-              <strong>Calendar Sync (.ics)</strong>
-              <span>Sync all scheduled activities and flights directly to Apple or Google Calendar</span>
-            </div>
-            <div class="export-card-arrow">↓</div>
-          </a>
+      <div class="form-group-field">
+        <label class="form-label-title">Secret Companion Share Link</label>
+        <div style="display: flex; gap: 8px;">
+          <input id="input-share-link" class="liquid-input" type="text" readonly>
+          <button id="btn-copy-share-link" class="btn-liquid-primary" style="padding: 10px 18px;" type="button">Copy</button>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- MODAL: SETTINGS (AI MODEL & CONNECTION) -->
-  <div id="modal-settings" class="modal-backdrop">
-    <div class="modal-sheet">
-      <div class="modal-sheet-handle"></div>
-      <div class="modal-header">
-        <h3>Voyage Intelligence Settings</h3>
-        <button class="modal-close-btn" data-close="modal-settings">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>AI Provider</label>
-          <div class="segmented-radio-group">
-            <label class="segmented-radio-item">
-              <input type="radio" name="settings-provider" value="gemini" id="provider-gemini">
-              <div class="segmented-card">
-                <strong>Google Gemini</strong>
-                <span>Direct Gemini 3.8 Flash API with web search capabilities</span>
-              </div>
-            </label>
-            <label class="segmented-radio-item">
-              <input type="radio" name="settings-provider" value="ollama" id="provider-ollama">
-              <div class="segmented-card">
-                <strong>Local Ollama</strong>
-                <span>Runs 100% private and offline on your Umbrel server</span>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <!-- Gemini Specific Fields -->
-        <div id="settings-gemini-fields" class="provider-fields-box">
-          <div class="form-group">
-            <label for="settings-gemini-key">Gemini API Key</label>
-            <input type="password" id="settings-gemini-key" placeholder="Enter Gemini API key" class="input-base">
-            <span class="input-hint">Stored safely on your Umbrel server. Get a key at aistudio.google.com</span>
-          </div>
-          <div class="form-group">
-            <label for="settings-gemini-model">Model</label>
-            <input type="text" id="settings-gemini-model" value="gemini-3.8-flash" class="input-base">
-          </div>
-        </div>
-
-        <!-- Ollama Specific Fields -->
-        <div id="settings-ollama-fields" class="provider-fields-box" style="display:none;">
-          <div class="form-group">
-            <label for="settings-ollama-url">Ollama Host URL</label>
-            <input type="text" id="settings-ollama-url" value="http://umbrel.local:11434" class="input-base">
-            <span class="input-hint">URL of your Ollama container or local host</span>
-          </div>
-          <div class="form-group">
-            <label for="settings-ollama-model">Ollama Model</label>
-            <input type="text" id="settings-ollama-model" value="llama3:latest" class="input-base">
-          </div>
-        </div>
-
-        <!-- Web Search Toggle -->
-        <div class="form-group">
-          <label class="toggle-control-label">
-            <input type="checkbox" id="settings-web-search" checked>
-            <span>Real-time DuckDuckGo Web Grounding (enhances recommendations with live web info)</span>
-          </label>
-        </div>
-
-        <!-- Connection Test Box -->
-        <div id="test-connection-result" class="callout-box" style="display:none;"></div>
-
-        <div class="modal-footer">
-          <button type="button" id="btn-test-ai-conn" class="btn-secondary-glow">⚡ Test Connection</button>
-          <button type="button" id="btn-save-settings" class="btn-primary-gradient">Save Settings</button>
-        </div>
+      <div style="display: flex; gap: 12px; margin-top: 20px;">
+        <button id="btn-download-trip-json" class="btn-liquid-subtle" style="flex: 1;" type="button">
+          <span class="material-symbols-outlined text-[18px]">download</span>
+          <span>Download Trip (JSON)</span>
+        </button>
       </div>
     </div>
   </div>
 
   <!-- Leaflet Map JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Client Application Logic -->
   <script src="/app.js"></script>
 </body>
 </html>
