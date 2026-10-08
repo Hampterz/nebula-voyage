@@ -2,6 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+LABEL org.opencontainers.image.source="https://github.com/Hampterz/nebula-voyage"
+LABEL org.opencontainers.image.description="All-in-one AI trip planner, itinerary viewer, and trip sharing for Umbrel"
+
 # Install curl for healthchecks
 RUN apk add --no-cache curl
 

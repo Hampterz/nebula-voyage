@@ -2,363 +2,520 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0e1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Voyage · Modern AI Trip Planner & Itinerary</title>
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
   <!-- Leaflet Map CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <!-- Top Navigation Header -->
-  <header class="navbar">
-    <div class="nav-left">
-      <div class="brand-logo" id="btn-home">
-        <span class="brand-icon">🧭</span>
-        <span class="brand-name">Voyage</span>
-      </div>
-      <!-- Trip Selector Dropdown -->
-      <div class="trip-selector-container">
-        <select id="select-active-trip" class="trip-dropdown" aria-label="Select Active Trip">
-          <option value="">Loading trips...</option>
-        </select>
-        <button id="btn-new-trip" class="btn-subtle" title="Create a new trip">+ New Trip</button>
-        <button id="btn-open-import" class="btn-subtle" title="Paste and import an existing plan with AI">📋 Import Plan</button>
-      </div>
-    </div>
 
-    <!-- Mode Switcher: Planning vs Viewing -->
-    <div class="nav-center">
-      <div class="mode-pills" role="tablist">
-        <button id="tab-planning" class="mode-pill active" role="tab" aria-selected="true">
-          <span class="pill-icon">✨</span> Planning
+  <!-- APP TOAST NOTIFICATIONS -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- TOP APP BAR -->
+  <header class="app-header">
+    <div class="header-inner">
+      <!-- Left: Brand Logo & Trip Selector -->
+      <div class="header-left">
+        <div class="brand-pill" id="btn-brand-home" title="Voyage AI Travel Planner">
+          <div class="brand-icon-box">
+            <svg viewBox="0 0 24 24" class="svg-icon brand-svg" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor"/>
+            </svg>
+          </div>
+          <span class="brand-title">Voyage</span>
+        </div>
+
+        <!-- Trip Switcher Dropdown Pill -->
+        <div class="trip-switcher-wrap">
+          <button id="btn-trip-selector-trigger" class="trip-switcher-pill" aria-haspopup="listbox" aria-expanded="false">
+            <span class="trip-dest-icon">📍</span>
+            <span id="header-trip-name" class="trip-name-text">Loading Trip...</span>
+            <svg class="chevron-svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          </button>
+          
+          <!-- Dropdown Menu -->
+          <div id="trip-dropdown-menu" class="trip-dropdown-menu">
+            <div class="dropdown-header">
+              <span>Your Trips</span>
+              <button id="btn-quick-new-trip" class="btn-text-action">+ New Trip</button>
+            </div>
+            <div id="trip-dropdown-list" class="trip-dropdown-list" role="listbox">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Desktop Navigation Tabs -->
+      <nav class="desktop-nav" role="tablist">
+        <button id="nav-tab-itinerary" class="nav-tab active" role="tab" aria-selected="true" data-tab="itinerary">
+          <svg viewBox="0 0 24 24" class="tab-svg" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Itinerary</span>
         </button>
-        <button id="tab-viewing" class="mode-pill" role="tab" aria-selected="false">
-          <span class="pill-icon">🗺️</span> Viewing
+        <button id="nav-tab-ai" class="nav-tab" role="tab" aria-selected="false" data-tab="ai">
+          <svg viewBox="0 0 24 24" class="tab-svg" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <span>AI Co-Pilot</span>
+        </button>
+        <button id="nav-tab-packing" class="nav-tab" role="tab" aria-selected="false" data-tab="packing">
+          <svg viewBox="0 0 24 24" class="tab-svg" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          <span>Packing</span>
+          <span id="badge-pack-progress" class="tab-counter">0/0</span>
+        </button>
+        <button id="nav-tab-budget" class="nav-tab" role="tab" aria-selected="false" data-tab="budget">
+          <svg viewBox="0 0 24 24" class="tab-svg" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Budget</span>
+        </button>
+      </nav>
+
+      <!-- Right: Actions (Share, Settings) -->
+      <div class="header-right">
+        <button id="btn-header-share" class="btn-action-pill" title="Share with companions or export itinerary">
+          <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          <span class="desktop-only-text">Share</span>
+        </button>
+
+        <button id="btn-header-settings" class="btn-icon-round" title="AI Provider & Model Settings">
+          <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
       </div>
-    </div>
-
-    <div class="nav-right">
-      <button id="btn-share-trip" class="btn-secondary" title="Share trip or export itinerary">
-        <span>🔗</span> Share & Export
-      </button>
-      <button id="btn-open-settings" class="btn-icon" title="AI & App Settings">
-        <span>⚙️</span>
-      </button>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="main-content">
+  <!-- MAIN VIEWPORT CONTENT -->
+  <main class="app-main-container">
 
-    <!-- Hero / Trip Overview Header -->
-    <section class="trip-hero-card" id="trip-hero">
-      <div class="hero-details">
-        <div class="hero-top-meta">
-          <span class="badge-destination" id="hero-dest">📍 Destination</span>
-          <span class="badge-dates" id="hero-dates">📅 Dates</span>
-          <span class="badge-travelers" id="hero-travelers">👥 Travelers</span>
-          <span class="badge-style" id="hero-style">🏷️ Style</span>
-        </div>
-        <h1 class="hero-title" id="hero-title">Select or Create a Trip</h1>
-        <p class="hero-notes" id="hero-notes">Loading notes...</p>
-      </div>
-      <!-- Real-time Destination Weather Card -->
-      <div class="hero-weather-card" id="weather-card">
-        <div class="weather-loading" id="weather-status">Fetching forecast...</div>
-      </div>
-    </section>
+    <!-- HERO TRIP BANNER -->
+    <section class="trip-banner" id="trip-banner">
+      <div class="banner-glass-content">
+        <div class="banner-top-row">
+          <div class="trip-tags-scroll">
+            <span class="chip chip-dest" id="hero-dest">📍 Destination</span>
+            <span class="chip chip-dates" id="hero-dates">📅 Dates</span>
+            <span class="chip chip-travelers" id="hero-travelers">👥 Travelers</span>
+            <span class="chip chip-style" id="hero-style">✨ Vibe</span>
+          </div>
 
-    <!-- SECTION 1: PLANNING -->
-    <section id="section-planning" class="tab-view active">
-      <div class="planning-grid">
-        <!-- Left Column: AI Co-Pilot & Brainstorming -->
-        <div class="planning-ai-column">
-          <div class="card ai-card">
-            <div class="card-header">
-              <div class="card-title-group">
-                <span class="card-icon">⚡</span>
-                <div>
-                  <h2>AI Travel Planner</h2>
-                  <p class="card-subtitle" id="ai-active-provider-label">Using Google Gemini & Live Web Search</p>
-                </div>
-              </div>
-              <span class="badge-ai-pill" id="badge-ai-model">Gemini 3.8 Flash</span>
-            </div>
-
-            <!-- Quick Suggestion Prompts -->
-            <div class="ai-prompt-pills">
-              <button class="prompt-pill" data-prompt="Find top 5 must-visit landmarks and photo spots">📸 Must-See Sights</button>
-              <button class="prompt-pill" data-prompt="Best authentic food, local markets and cafes">🍜 Local Food & Dining</button>
-              <button class="prompt-pill" data-prompt="Unique hidden gems, peaceful walks and secret gardens">💎 Hidden Gems</button>
-              <button class="prompt-pill" data-prompt="Best neighborhood boutique hotels and ryokans">🏨 Top Accommodations</button>
-            </div>
-
-            <!-- Custom AI Input -->
-            <div class="ai-input-row">
-              <input type="text" id="ai-custom-prompt" placeholder="Ask AI: e.g. 'Plan an afternoon walking tour with coffee stops'" class="input-text">
-              <button id="btn-generate-ai" class="btn-primary">
-                <span id="ai-btn-text">Inspire Me</span>
-              </button>
-            </div>
-
-            <!-- AI Output Stream / Results -->
-            <div id="ai-results-container" class="ai-results-list">
-              <div class="ai-placeholder">
-                <p>💡 Click an idea above or ask anything to brainstorm places, restaurants, hotels, and sights with real-time web info.</p>
-              </div>
-            </div>
+          <!-- Trip Edit / Delete Action -->
+          <div class="banner-actions">
+            <button id="btn-edit-trip-details" class="btn-micro" title="Edit trip details">
+              <svg viewBox="0 0 24 24" class="micro-svg" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <span>Edit Details</span>
+            </button>
           </div>
         </div>
 
-        <!-- Right Column: Manual Planning Modules & Checklists -->
-        <div class="planning-manual-column">
-          <!-- Quick Add Manual Item -->
-          <div class="card add-item-card">
-            <div class="card-header">
-              <div class="card-title-group">
-                <span class="card-icon">➕</span>
-                <h2>Add to Itinerary</h2>
-              </div>
-            </div>
-            <form id="form-add-item" class="add-item-form">
-              <div class="form-row">
-                <div class="form-group flex-2">
-                  <label for="item-title">Title</label>
-                  <input type="text" id="item-title" placeholder="e.g. Flight NH 112, Hotel Kanra, Ramen Dinner" required>
-                </div>
-                <div class="form-group flex-1">
-                  <label for="item-category">Category</label>
-                  <select id="item-category">
-                    <option value="activity">🎯 Activity / Sight</option>
-                    <option value="food">🍽️ Food & Dining</option>
-                    <option value="hotel">🏨 Hotel & Stay</option>
-                    <option value="flight">✈️ Flight / Transit</option>
-                    <option value="note">📝 Note / Info</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group flex-1">
-                  <label for="item-day">Day #</label>
-                  <input type="number" id="item-day" min="1" value="1" required>
-                </div>
-                <div class="form-group flex-1">
-                  <label for="item-timeblock">Time Block</label>
-                  <select id="item-timeblock">
-                    <option value="morning">Morning</option>
-                    <option value="afternoon">Afternoon</option>
-                    <option value="evening">Evening</option>
-                    <option value="night">Night</option>
-                  </select>
-                </div>
-                <div class="form-group flex-1">
-                  <label for="item-time">Approx Time</label>
-                  <input type="time" id="item-time" value="10:00">
-                </div>
-                <div class="form-group flex-1">
-                  <label for="item-cost">Est. Cost</label>
-                  <input type="number" id="item-cost" placeholder="0">
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group flex-2">
-                  <label for="item-location">Location / Address</label>
-                  <input type="text" id="item-location" placeholder="e.g. Pontocho, Nakagyo Ward, Kyoto">
-                </div>
-                <div class="form-group flex-2">
-                  <label for="item-website">Website URL</label>
-                  <input type="url" id="item-website" placeholder="https://...">
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="item-notes">Notes & Details</label>
-                <input type="text" id="item-notes" placeholder="e.g. Confirmation #849102, dress code, reservations required">
-              </div>
-              <button type="submit" class="btn-primary w-100">Add to Trip Itinerary</button>
-            </form>
+        <div class="banner-main-row">
+          <div class="banner-text">
+            <h1 class="trip-title" id="hero-title">Select or Create a Trip</h1>
+            <p class="trip-notes" id="hero-notes">Loading notes...</p>
           </div>
 
-          <!-- Secondary Tabs: Packing Checklist & Budget Tracker -->
-          <div class="card tools-card">
-            <div class="tools-tab-header">
-              <button id="tab-packing-btn" class="tool-tab active">🧳 Packing Checklist</button>
-              <button id="tab-budget-btn" class="tool-tab">💰 Budget & Expenses</button>
-            </div>
-
-            <!-- Packing Checklist Panel -->
-            <div id="panel-packing" class="tool-panel active">
-              <div class="panel-header-actions">
-                <span id="packing-progress-label">0 of 0 items packed</span>
-                <button id="btn-auto-pack" class="btn-subtle" title="Use AI to generate tailored packing list">⚡ AI Packing Suggestions</button>
-              </div>
-              <div class="progress-bar-bg">
-                <div id="packing-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
-              </div>
-              <div class="add-pack-row">
-                <input type="text" id="pack-input-text" placeholder="Add custom item (e.g. Passport, adapters...)" class="input-text">
-                <select id="pack-input-category" class="select-category">
-                  <option value="Documents">Documents</option>
-                  <option value="Clothing">Clothing</option>
-                  <option value="Electronics">Electronics</option>
-                  <option value="Toiletries">Toiletries</option>
-                  <option value="Gear">Gear</option>
-                </select>
-                <button id="btn-add-pack" class="btn-secondary">Add</button>
-              </div>
-              <ul id="packing-list-items" class="checklist-items">
-                <!-- Dynamically rendered -->
-              </ul>
-            </div>
-
-            <!-- Budget & Expense Panel -->
-            <div id="panel-budget" class="tool-panel">
-              <div class="budget-summary-banner">
-                <div class="budget-stat">
-                  <span class="stat-label">Target Budget</span>
-                  <span class="stat-value" id="budget-target-val">$0</span>
-                </div>
-                <div class="budget-stat">
-                  <span class="stat-label">Total Logged</span>
-                  <span class="stat-value" id="budget-spent-val">$0</span>
-                </div>
-                <div class="budget-stat">
-                  <span class="stat-label">Remaining</span>
-                  <span class="stat-value" id="budget-remain-val">$0</span>
-                </div>
-              </div>
-              <div class="add-expense-row">
-                <input type="text" id="exp-input-title" placeholder="Expense description..." class="input-text flex-2">
-                <select id="exp-input-category" class="select-category flex-1">
-                  <option value="Flights">Flights</option>
-                  <option value="Hotels">Hotels</option>
-                  <option value="Food">Food</option>
-                  <option value="Activities">Activities</option>
-                  <option value="Transit">Transit</option>
-                  <option value="Other">Other</option>
-                </select>
-                <input type="number" id="exp-input-amount" placeholder="Amount" class="input-text flex-1">
-                <button id="btn-add-expense" class="btn-secondary">Log</button>
-              </div>
-              <ul id="expense-list-items" class="expense-items">
-                <!-- Dynamically rendered -->
-              </ul>
-            </div>
+          <!-- Weather Chip Widget -->
+          <div class="weather-widget" id="weather-card">
+            <div id="weather-status" class="weather-status-box">Fetching weather...</div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- SECTION 2: VIEWING (EXECUTIVE ITINERARY & MAP) -->
-    <section id="section-viewing" class="tab-view">
-      <div class="viewing-layout">
-        <!-- Left: Interactive Timeline & Day Filters -->
-        <div class="viewing-timeline-column">
-          <!-- Day Filter Buttons -->
-          <div class="day-filter-bar" id="day-filter-bar">
-            <button class="day-filter-btn active" data-day="all">All Days</button>
-            <!-- Generated dynamically based on trip duration -->
-          </div>
+    <!-- ==============================================
+         VIEW 1: ITINERARY & MAP (UNIFIED)
+         ============================================== -->
+    <section id="view-itinerary" class="view-panel active">
+      <!-- Controls Toolbar: Day Filters + Add Button + Map Toggle -->
+      <div class="itinerary-toolbar">
+        <!-- Day Filters Scroll -->
+        <div class="day-chips-scroll" id="day-filter-bar">
+          <button class="day-chip active" data-day="all">All Days</button>
+        </div>
 
-          <!-- Schedule Timeline Container -->
-          <div id="viewing-timeline-container" class="timeline-container">
-            <!-- Dynamically populated with day cards and one-click Google Maps links -->
+        <div class="toolbar-actions">
+          <!-- Mobile Map Toggle -->
+          <button id="btn-toggle-map" class="btn-action-subtle" title="Toggle interactive map view">
+            <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            <span id="map-toggle-text">Show Map</span>
+          </button>
+
+          <!-- Add Item Button -->
+          <button id="btn-open-add-item" class="btn-primary-gradient">
+            <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Add Stop</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Unified Layout: Timeline + Responsive Map -->
+      <div class="itinerary-split-layout" id="itinerary-layout">
+        <!-- Left: Day-by-Day Timeline -->
+        <div class="timeline-column" id="timeline-column">
+          <div id="timeline-cards-container" class="timeline-cards-container">
+            <!-- Dynamically populated with day groups and cards -->
           </div>
         </div>
 
-        <!-- Right: Interactive Leaflet Map & Trip Summary -->
-        <div class="viewing-map-column">
-          <div class="card map-card">
-            <div class="card-header">
-              <div class="card-title-group">
-                <span class="card-icon">📍</span>
-                <h2>Interactive Route & Sights Map</h2>
+        <!-- Right: Interactive Leaflet Map Container -->
+        <div class="map-column" id="map-column">
+          <div class="map-card-wrapper">
+            <div class="map-header-bar">
+              <div class="map-title-group">
+                <span class="map-dot"></span>
+                <strong>Trip Route & Sights Map</strong>
               </div>
-              <span class="badge-map-info">OpenStreetMap</span>
+              <span class="map-attribution-badge">OpenStreetMap</span>
             </div>
-            <div id="trip-map" class="map-container"></div>
+            <div id="trip-map" class="leaflet-map-canvas"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================
+         VIEW 2: AI CO-PILOT
+         ============================================== -->
+    <section id="view-ai" class="view-panel">
+      <div class="ai-assistant-container">
+        <!-- Assistant Hero Card -->
+        <div class="ai-banner-card">
+          <div class="ai-banner-left">
+            <div class="ai-pulse-orb">
+              <svg viewBox="0 0 24 24" class="orb-svg" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            </div>
+            <div>
+              <h2 class="ai-hero-title">AI Voyage Co-Pilot</h2>
+              <p class="ai-hero-subtitle" id="ai-active-provider-label">Grounded with real-time web discovery</p>
+            </div>
           </div>
 
-          <!-- At-a-glance Trip Executive Stats -->
-          <div class="card summary-card">
-            <div class="card-header">
-              <div class="card-title-group">
-                <span class="card-icon">📊</span>
-                <h2>Trip Summary</h2>
-              </div>
-            </div>
-            <div class="summary-stats-grid">
-              <div class="summary-box">
-                <span class="summary-num" id="stat-total-stops">0</span>
-                <span class="summary-sub">Planned Stops</span>
-              </div>
-              <div class="summary-box">
-                <span class="summary-num" id="stat-total-food">0</span>
-                <span class="summary-sub">Dining Spots</span>
-              </div>
-              <div class="summary-box">
-                <span class="summary-num" id="stat-total-days">0</span>
-                <span class="summary-sub">Days Total</span>
-              </div>
-              <div class="summary-box">
-                <span class="summary-num" id="stat-budget-progress">0%</span>
-                <span class="summary-sub">Budget Committed</span>
-              </div>
-            </div>
+          <div class="ai-banner-right">
+            <span class="model-pill" id="badge-ai-model">Gemini 3.8 Flash</span>
+            <button id="btn-hero-import-plan" class="btn-action-subtle">
+              <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <span>Import Plan</span>
+            </button>
           </div>
+        </div>
+
+        <!-- Quick Inspiration Pills -->
+        <div class="ai-prompt-shortcuts">
+          <button class="ai-shortcut-chip" data-prompt="Find top 5 must-visit iconic landmarks and scenic photo spots">📸 Must-See Highlights</button>
+          <button class="ai-shortcut-chip" data-prompt="Best authentic food, street markets, local cafes, and dinner gems">🍜 Authentic Dining</button>
+          <button class="ai-shortcut-chip" data-prompt="Peaceful hidden gems, quiet neighborhood walks, and secret views">💎 Hidden Gems</button>
+          <button class="ai-shortcut-chip" data-prompt="Top boutique stays, centrally located hotels, and charming places to stay">🏨 Accommodations</button>
+          <button class="ai-shortcut-chip" data-prompt="Best day trip excursions nearby with travel transit tips">🚆 Day Trips</button>
+        </div>
+
+        <!-- Search / Prompt Input Bar -->
+        <div class="ai-input-bar">
+          <div class="ai-input-field-wrap">
+            <svg viewBox="0 0 24 24" class="search-svg" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="ai-custom-prompt" placeholder="Ask AI: e.g. '3-day foodie walk in Kyoto' or 'Quiet evening spots'..." class="ai-input">
+          </div>
+          <button id="btn-generate-ai" class="btn-primary-gradient btn-ai-send">
+            <span id="ai-btn-text">Generate Ideas</span>
+            <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+
+        <!-- Results Stream Container -->
+        <div id="ai-results-container" class="ai-results-grid">
+          <div class="ai-empty-state">
+            <div class="empty-icon-circle">✨</div>
+            <h3>Ready to craft your journey</h3>
+            <p>Select any shortcut above or type a custom request to generate curated travel ideas with live web grounding.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================
+         VIEW 3: PACKING CHECKLIST
+         ============================================== -->
+    <section id="view-packing" class="view-panel">
+      <div class="tool-content-max">
+        <!-- Packing Overview Card -->
+        <div class="card-glass packing-header-card">
+          <div class="packing-header-top">
+            <div>
+              <h2 class="section-title">Packing Checklist</h2>
+              <p class="section-subtitle" id="packing-progress-label">0 of 0 items packed</p>
+            </div>
+            <button id="btn-auto-pack" class="btn-secondary-glow">
+              <svg viewBox="0 0 24 24" class="btn-svg" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>AI Smart Pack</span>
+            </button>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="progress-track">
+            <div id="packing-progress-bar" class="progress-fill" style="width: 0%"></div>
+          </div>
+
+          <!-- Category Filter Bar -->
+          <div class="pack-filter-row">
+            <button class="pack-filter-btn active" data-pack-filter="all">All</button>
+            <button class="pack-filter-btn" data-pack-filter="Documents">Documents</button>
+            <button class="pack-filter-btn" data-pack-filter="Clothing">Clothing</button>
+            <button class="pack-filter-btn" data-pack-filter="Electronics">Electronics</button>
+            <button class="pack-filter-btn" data-pack-filter="Toiletries">Toiletries</button>
+            <button class="pack-filter-btn" data-pack-filter="Gear">Gear</button>
+          </div>
+        </div>
+
+        <!-- Quick Add Packing Row -->
+        <form id="form-quick-pack" class="quick-add-bar">
+          <input type="text" id="pack-input-text" placeholder="Add custom item (e.g. Passport, universal adapter, walking shoes)..." class="input-base flex-3" required>
+          <select id="pack-input-category" class="select-base flex-1">
+            <option value="Documents">📄 Documents</option>
+            <option value="Clothing">👕 Clothing</option>
+            <option value="Electronics">🔌 Electronics</option>
+            <option value="Toiletries">🧴 Toiletries</option>
+            <option value="Gear">🎒 Gear</option>
+            <option value="Health">💊 Health</option>
+          </select>
+          <button type="submit" class="btn-primary-gradient">Add</button>
+        </form>
+
+        <!-- Packing Items List -->
+        <ul id="packing-list-items" class="checklist-grid">
+          <!-- Dynamically populated -->
+        </ul>
+      </div>
+    </section>
+
+    <!-- ==============================================
+         VIEW 4: BUDGET & EXPENSES
+         ============================================== -->
+    <section id="view-budget" class="view-panel">
+      <div class="tool-content-max">
+        <!-- Budget Financial Dashboard Cards -->
+        <div class="budget-stat-grid">
+          <div class="stat-card">
+            <span class="stat-meta">Target Budget</span>
+            <span class="stat-value" id="budget-target-val">$0</span>
+            <span class="stat-sub" id="budget-target-currency">Set in trip details</span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-meta">Total Spent</span>
+            <span class="stat-value text-indigo" id="budget-spent-val">$0</span>
+            <span class="stat-sub" id="budget-spent-pct">0% of total budget</span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-meta">Remaining</span>
+            <span class="stat-value text-emerald" id="budget-remain-val">$0</span>
+            <span class="stat-sub" id="budget-remain-status">On Track</span>
+          </div>
+        </div>
+
+        <!-- Log Expense Form Card -->
+        <div class="card-glass">
+          <div class="card-head-simple">
+            <h3>Log an Expense</h3>
+          </div>
+          <form id="form-quick-expense" class="quick-expense-form">
+            <input type="text" id="exp-input-title" placeholder="Description (e.g. Flight, Shinkansen, Dinner)..." class="input-base flex-2" required>
+            <select id="exp-input-category" class="select-base flex-1">
+              <option value="Flights">✈️ Flights</option>
+              <option value="Hotels">🏨 Hotels</option>
+              <option value="Food">🍽️ Food</option>
+              <option value="Activities">🎯 Activities</option>
+              <option value="Transit">🚆 Transit</option>
+              <option value="Shopping">🛍️ Shopping</option>
+              <option value="Other">📦 Other</option>
+            </select>
+            <input type="number" id="exp-input-amount" placeholder="Amount" class="input-base flex-1" min="0" step="any" required>
+            <button type="submit" class="btn-primary-gradient">Log Expense</button>
+          </form>
+        </div>
+
+        <!-- Logged Expenses List -->
+        <div class="card-glass mt-20">
+          <div class="card-head-simple">
+            <h3>Logged Expenses</h3>
+          </div>
+          <ul id="expense-list-items" class="expense-list">
+            <!-- Dynamically populated -->
+          </ul>
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- MODAL: NEW TRIP -->
-  <div id="modal-new-trip" class="modal-overlay">
-    <div class="modal-dialog">
+  <!-- MOBILE BOTTOM NAVIGATION (THUMB FRIENDLY) -->
+  <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+    <button class="mobile-nav-btn active" data-tab="itinerary">
+      <svg viewBox="0 0 24 24" class="mob-svg" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Itinerary</span>
+    </button>
+    <button class="mobile-nav-btn" data-tab="ai">
+      <svg viewBox="0 0 24 24" class="mob-svg" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      <span>AI Plan</span>
+    </button>
+    <button class="mobile-nav-btn" data-tab="packing">
+      <svg viewBox="0 0 24 24" class="mob-svg" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      <span>Packing</span>
+    </button>
+    <button class="mobile-nav-btn" data-tab="budget">
+      <svg viewBox="0 0 24 24" class="mob-svg" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Budget</span>
+    </button>
+  </nav>
+
+  <!-- MOBILE FLOATING ACTION BUTTON (QUICK ADD STOP) -->
+  <button id="mobile-fab-add" class="mobile-fab" title="Add Itinerary Stop" aria-label="Add Itinerary Stop">
+    <svg viewBox="0 0 24 24" class="fab-svg" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+
+  <!-- ==============================================
+       MODALS
+       ============================================== -->
+
+  <!-- MODAL: ADD / EDIT ITINERARY ITEM -->
+  <div id="modal-item" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-sheet-handle"></div>
       <div class="modal-header">
-        <h3>Create New Trip</h3>
-        <button class="modal-close" data-close="modal-new-trip">✕</button>
+        <h3 id="modal-item-heading">Add Itinerary Stop</h3>
+        <button class="modal-close-btn" data-close="modal-item">✕</button>
+      </div>
+      <form id="form-item-submit" class="modal-body">
+        <input type="hidden" id="item-form-id">
+        
+        <div class="form-group">
+          <label for="item-title">Title *</label>
+          <input type="text" id="item-title" placeholder="e.g. Flight NH 112, Hotel Kanra, Tsukiji Fish Market" class="input-base" required>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="item-category">Category</label>
+            <select id="item-category" class="select-base">
+              <option value="activity">🎯 Activity / Sights</option>
+              <option value="food">🍽️ Food & Dining</option>
+              <option value="hotel">🏨 Hotel & Lodging</option>
+              <option value="flight">✈️ Flight / Transit</option>
+              <option value="note">📝 Note / Info</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="item-day">Day #</label>
+            <input type="number" id="item-day" min="1" value="1" class="input-base" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="item-timeblock">Time Block</label>
+            <select id="item-timeblock" class="select-base">
+              <option value="morning">Morning</option>
+              <option value="afternoon">Afternoon</option>
+              <option value="evening">Evening</option>
+              <option value="night">Night</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="item-time">Approx Time</label>
+            <input type="time" id="item-time" value="10:00" class="input-base">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="item-location">Location / Landmark</label>
+          <input type="text" id="item-location" placeholder="e.g. Pontocho, Nakagyo Ward, Kyoto" class="input-base">
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="item-website">Website URL (optional)</label>
+            <input type="url" id="item-website" placeholder="https://..." class="input-base">
+          </div>
+          <div class="form-group">
+            <label for="item-cost">Est. Cost</label>
+            <input type="number" id="item-cost" placeholder="0" class="input-base">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="item-notes">Notes & Tips</label>
+          <textarea id="item-notes" rows="2" placeholder="Confirmation #, reservation info, booking tips..." class="input-base"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btn-delete-item" class="btn-danger-outline" style="display:none;">Delete Stop</button>
+          <div class="footer-right-buttons">
+            <button type="button" class="btn-subtle" data-close="modal-item">Cancel</button>
+            <button type="submit" id="btn-submit-item-text" class="btn-primary-gradient">Save Stop</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE NEW TRIP -->
+  <div id="modal-new-trip" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-sheet-handle"></div>
+      <div class="modal-header">
+        <h3>Create New Voyage</h3>
+        <button class="modal-close-btn" data-close="modal-new-trip">✕</button>
       </div>
       <form id="form-create-trip" class="modal-body">
         <div class="form-group">
           <label for="trip-destination">Destination *</label>
-          <input type="text" id="trip-destination" placeholder="e.g. Barcelona, Spain or Reykjavik, Iceland" required>
+          <input type="text" id="trip-destination" placeholder="e.g. Tokyo, Japan or Amalfi Coast, Italy" class="input-base" required>
         </div>
+
         <div class="form-group">
           <label for="trip-name">Trip Title (optional)</label>
-          <input type="text" id="trip-name" placeholder="e.g. Summer Mediterranean Getaway">
+          <input type="text" id="trip-name" placeholder="e.g. Tokyo Autumn Culinary Expedition" class="input-base">
         </div>
-        <div class="form-row">
-          <div class="form-group flex-1">
+
+        <div class="form-grid-2">
+          <div class="form-group">
             <label for="trip-start">Start Date</label>
-            <input type="date" id="trip-start">
+            <input type="date" id="trip-start" class="input-base">
           </div>
-          <div class="form-group flex-1">
+          <div class="form-group">
             <label for="trip-end">End Date</label>
-            <input type="date" id="trip-end">
+            <input type="date" id="trip-end" class="input-base">
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-group flex-1">
+
+        <div class="form-grid-2">
+          <div class="form-group">
             <label for="trip-travelers">Travelers</label>
-            <input type="text" id="trip-travelers" placeholder="e.g. 2 Adults, 1 Child" value="2 Adults">
+            <input type="text" id="trip-travelers" value="2 Adults" class="input-base">
           </div>
-          <div class="form-group flex-1">
-            <label for="trip-style">Style / Vibe</label>
-            <input type="text" id="trip-style" placeholder="e.g. Food & Wine, Relaxation, Adventure" value="Exploration & Culture">
+          <div class="form-group">
+            <label for="trip-style">Vibe / Style</label>
+            <input type="text" id="trip-style" value="Culture & Food" class="input-base">
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-group flex-1">
+
+        <div class="form-grid-2">
+          <div class="form-group">
             <label for="trip-budget">Target Budget</label>
-            <input type="number" id="trip-budget" placeholder="e.g. 3000" value="2500">
+            <input type="number" id="trip-budget" value="2500" class="input-base">
           </div>
-          <div class="form-group flex-1">
+          <div class="form-group">
             <label for="trip-currency">Currency</label>
-            <select id="trip-currency">
+            <select id="trip-currency" class="select-base">
               <option value="USD">USD ($)</option>
               <option value="EUR">EUR (€)</option>
               <option value="GBP">GBP (£)</option>
@@ -368,252 +525,267 @@
             </select>
           </div>
         </div>
+
         <div class="form-group">
-          <label for="trip-notes-input">Notes & Ideas</label>
-          <textarea id="trip-notes-input" rows="2" placeholder="Must-try restaurants, flight constraints, passport requirements..."></textarea>
+          <label for="trip-notes-input">Trip Notes</label>
+          <textarea id="trip-notes-input" rows="2" placeholder="Flight constraints, travel goals, passport reminders..." class="input-base"></textarea>
         </div>
+
         <div class="modal-footer">
           <button type="button" class="btn-subtle" data-close="modal-new-trip">Cancel</button>
-          <button type="submit" class="btn-primary">Create Trip</button>
+          <button type="submit" class="btn-primary-gradient">Create Trip</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: SETTINGS (AI MODEL & API KEY SWITCHER) -->
-  <div id="modal-settings" class="modal-overlay">
-    <div class="modal-dialog">
+  <!-- MODAL: EDIT ACTIVE TRIP DETAILS -->
+  <div id="modal-edit-trip" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-sheet-handle"></div>
       <div class="modal-header">
-        <h3>AI & App Settings</h3>
-        <button class="modal-close" data-close="modal-settings">✕</button>
+        <h3>Edit Trip Details</h3>
+        <button class="modal-close-btn" data-close="modal-edit-trip">✕</button>
+      </div>
+      <form id="form-edit-trip" class="modal-body">
+        <div class="form-group">
+          <label for="edit-trip-destination">Destination *</label>
+          <input type="text" id="edit-trip-destination" class="input-base" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-trip-title">Title</label>
+          <input type="text" id="edit-trip-title" class="input-base">
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="edit-trip-start">Start Date</label>
+            <input type="date" id="edit-trip-start" class="input-base">
+          </div>
+          <div class="form-group">
+            <label for="edit-trip-end">End Date</label>
+            <input type="date" id="edit-trip-end" class="input-base">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="edit-trip-travelers">Travelers</label>
+            <input type="text" id="edit-trip-travelers" class="input-base">
+          </div>
+          <div class="form-group">
+            <label for="edit-trip-style">Vibe / Style</label>
+            <input type="text" id="edit-trip-style" class="input-base">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="edit-trip-budget">Target Budget</label>
+            <input type="number" id="edit-trip-budget" class="input-base">
+          </div>
+          <div class="form-group">
+            <label for="edit-trip-currency">Currency</label>
+            <select id="edit-trip-currency" class="select-base">
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="JPY">JPY (¥)</option>
+              <option value="CAD">CAD ($)</option>
+              <option value="AUD">AUD ($)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-trip-notes">Notes</label>
+          <textarea id="edit-trip-notes" rows="2" class="input-base"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btn-delete-active-trip" class="btn-danger-outline">Delete Trip</button>
+          <div class="footer-right-buttons">
+            <button type="button" class="btn-subtle" data-close="modal-edit-trip">Cancel</button>
+            <button type="submit" class="btn-primary-gradient">Save Changes</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: IMPORT PLAN WITH AI -->
+  <div id="modal-import-plan" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-sheet-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title-with-icon">
+          <span class="icon-orb">📋</span>
+          <div>
+            <h3>Paste & Import Travel Plan</h3>
+            <p class="modal-subtitle">AI extracts destinations, days, and places from messy emails or text.</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" data-close="modal-import-plan">✕</button>
+      </div>
+      <form id="form-import-plan" class="modal-body">
+        <div class="form-group">
+          <label for="import-plan-text">Paste Existing Plan / Notes *</label>
+          <textarea id="import-plan-text" rows="7" placeholder="Paste your itinerary here... For example:
+
+Day 1: Arrive in Paris 10:30am on flight AF 007. Check into Hotel Le Marais. Lunch at Cafe de Flore. Afternoon visit to the Louvre.
+Day 2: Morning visit to Versailles Palace. Dinner at Le Relais.
+Flight home on Sunday 4pm." class="input-base" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Import Target</label>
+          <div class="segmented-radio-group">
+            <label class="segmented-radio-item">
+              <input type="radio" name="import-mode" value="new" checked>
+              <div class="segmented-card">
+                <strong>Create New Trip</strong>
+                <span>Creates a brand new trip with extracted dates</span>
+              </div>
+            </label>
+            <label class="segmented-radio-item">
+              <input type="radio" name="import-mode" value="current">
+              <div class="segmented-card">
+                <strong>Append to Current Trip</strong>
+                <span id="import-current-trip-name">Add to active trip</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div id="import-status-box" class="callout-box" style="display:none;"></div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-subtle" data-close="modal-import-plan">Cancel</button>
+          <button type="submit" id="btn-submit-import" class="btn-primary-gradient">✨ Convert & Import</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SHARE & EXPORT -->
+  <div id="modal-share" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-sheet-handle"></div>
+      <div class="modal-header">
+        <h3>Share & Export Trip</h3>
+        <button class="modal-close-btn" data-close="modal-share">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-explainer">Share your live itinerary with travel partners. Anyone with the secret link can view on their phone without an Umbrel account.</p>
+
+        <!-- Public Link Input Box -->
+        <div class="form-group">
+          <label>Secret Guest View Link</label>
+          <div class="copy-action-bar">
+            <input type="text" id="share-link-input" readonly class="input-base">
+            <button id="btn-copy-share-link" class="btn-secondary-glow">Copy</button>
+          </div>
+          <span class="input-hint">Live read-only access. Auto-updates when you make changes.</span>
+        </div>
+
+        <div class="divider-subtle"></div>
+
+        <!-- Offline & Calendar Exports -->
+        <div class="export-cards-grid">
+          <a id="btn-export-html" class="export-action-card" download>
+            <div class="export-card-icon">📄</div>
+            <div class="export-card-info">
+              <strong>Offline Travel Guide (.html)</strong>
+              <span>Standalone HTML file to save on your phone for flights without WiFi</span>
+            </div>
+            <div class="export-card-arrow">↓</div>
+          </a>
+
+          <a id="btn-export-ics" class="export-action-card" download>
+            <div class="export-card-icon">📅</div>
+            <div class="export-card-info">
+              <strong>Calendar Sync (.ics)</strong>
+              <span>Sync all scheduled activities and flights directly to Apple or Google Calendar</span>
+            </div>
+            <div class="export-card-arrow">↓</div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SETTINGS (AI MODEL & CONNECTION) -->
+  <div id="modal-settings" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-sheet-handle"></div>
+      <div class="modal-header">
+        <h3>Voyage Intelligence Settings</h3>
+        <button class="modal-close-btn" data-close="modal-settings">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>AI Intelligence Provider</label>
-          <div class="provider-radio-group">
-            <label class="radio-card">
+          <label>AI Provider</label>
+          <div class="segmented-radio-group">
+            <label class="segmented-radio-item">
               <input type="radio" name="settings-provider" value="gemini" id="provider-gemini">
-              <div class="radio-content">
+              <div class="segmented-card">
                 <strong>Google Gemini</strong>
-                <span>Direct Gemini 3.8 Flash API with web capabilities</span>
+                <span>Direct Gemini 3.8 Flash API with web search capabilities</span>
               </div>
             </label>
-            <label class="radio-card">
+            <label class="segmented-radio-item">
               <input type="radio" name="settings-provider" value="ollama" id="provider-ollama">
-              <div class="radio-content">
+              <div class="segmented-card">
                 <strong>Local Ollama</strong>
-                <span>Runs privately on your Umbrel server or home network</span>
+                <span>Runs 100% private and offline on your Umbrel server</span>
               </div>
             </label>
           </div>
         </div>
 
         <!-- Gemini Specific Fields -->
-        <div id="settings-gemini-fields" class="provider-panel">
+        <div id="settings-gemini-fields" class="provider-fields-box">
           <div class="form-group">
             <label for="settings-gemini-key">Gemini API Key</label>
-            <input type="password" id="settings-gemini-key" placeholder="Enter your Google Gemini API key">
-            <small class="form-hint">Stored locally on your server. Get one for free at aistudio.google.com</small>
+            <input type="password" id="settings-gemini-key" placeholder="Enter Gemini API key" class="input-base">
+            <span class="input-hint">Stored safely on your Umbrel server. Get a key at aistudio.google.com</span>
           </div>
           <div class="form-group">
-            <label for="settings-gemini-model">Gemini Model</label>
-            <input type="text" id="settings-gemini-model" value="gemini-3.8-flash">
-            <small class="form-hint">Default: gemini-3.8-flash (auto-falls back if needed)</small>
+            <label for="settings-gemini-model">Model</label>
+            <input type="text" id="settings-gemini-model" value="gemini-3.8-flash" class="input-base">
           </div>
         </div>
 
         <!-- Ollama Specific Fields -->
-        <div id="settings-ollama-fields" class="provider-panel">
+        <div id="settings-ollama-fields" class="provider-fields-box" style="display:none;">
           <div class="form-group">
             <label for="settings-ollama-url">Ollama Host URL</label>
-            <input type="text" id="settings-ollama-url" value="http://umbrel.local:11434">
-            <small class="form-hint">Connects to Umbrel's Ollama or custom local server</small>
+            <input type="text" id="settings-ollama-url" value="http://umbrel.local:11434" class="input-base">
+            <span class="input-hint">URL of your Ollama container or local host</span>
           </div>
           <div class="form-group">
             <label for="settings-ollama-model">Ollama Model</label>
-            <input type="text" id="settings-ollama-model" value="llama3:latest">
+            <input type="text" id="settings-ollama-model" value="llama3:latest" class="input-base">
           </div>
         </div>
 
+        <!-- Web Search Toggle -->
         <div class="form-group">
-          <label class="checkbox-label">
+          <label class="toggle-control-label">
             <input type="checkbox" id="settings-web-search" checked>
-            <span>Enable real-time Web Search grounding (DuckDuckGo integration)</span>
+            <span>Real-time DuckDuckGo Web Grounding (enhances recommendations with live web info)</span>
           </label>
         </div>
 
-        <div id="test-connection-result" class="test-result-box" style="display:none;"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" id="btn-test-ai-conn" class="btn-subtle">⚡ Test Connection</button>
-        <button type="button" id="btn-save-settings" class="btn-primary">Save Settings</button>
-      </div>
-    </div>
-  </div>
+        <!-- Connection Test Box -->
+        <div id="test-connection-result" class="callout-box" style="display:none;"></div>
 
-  <!-- MODAL: SHARE & EXPORT -->
-  <div id="modal-share" class="modal-overlay">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3>Share & Export Trip</h3>
-        <button class="modal-close" data-close="modal-share">✕</button>
-      </div>
-      <div class="modal-body">
-        <p class="share-intro">Share this trip with family, friends, or travel companions. Anyone with the link can view the itinerary on their phone without logging in.</p>
-        
-        <!-- Live Link Box -->
-        <div class="form-group">
-          <label>Public Read-Only Link</label>
-          <div class="copy-input-row">
-            <input type="text" id="share-link-input" readonly>
-            <button id="btn-copy-share-link" class="btn-secondary">Copy</button>
-          </div>
-          <small class="form-hint">Works on any browser. No login required.</small>
-        </div>
-
-        <hr class="divider">
-
-        <!-- Export Options -->
-        <div class="export-options-grid">
-          <a id="btn-export-html" class="export-card" download>
-            <span class="export-icon">📄</span>
-            <div>
-              <strong>Standalone Offline Guide</strong>
-              <span>Download an interactive self-contained HTML file (works completely offline)</span>
-            </div>
-          </a>
-          <a id="btn-export-ics" class="export-card" download>
-            <span class="export-icon">📅</span>
-            <div>
-              <strong>Add to Calendar (.ics)</strong>
-              <span>Sync all scheduled activities and flights directly into Apple or Google Calendar</span>
-            </div>
-          </a>
+        <div class="modal-footer">
+          <button type="button" id="btn-test-ai-conn" class="btn-secondary-glow">⚡ Test Connection</button>
+          <button type="button" id="btn-save-settings" class="btn-primary-gradient">Save Settings</button>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- MODAL: INLINE EDIT ITEM (FROM VIEWING OR PLANNING) -->
-  <div id="modal-edit-item" class="modal-overlay">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3>Quick Edit Itinerary Item</h3>
-        <button class="modal-close" data-close="modal-edit-item">✕</button>
-      </div>
-      <form id="form-edit-item" class="modal-body">
-        <input type="hidden" id="edit-item-id">
-        <div class="form-row">
-          <div class="form-group flex-2">
-            <label for="edit-item-title">Title *</label>
-            <input type="text" id="edit-item-title" required>
-          </div>
-          <div class="form-group flex-1">
-            <label for="edit-item-category">Category</label>
-            <select id="edit-item-category">
-              <option value="activity">Activity</option>
-              <option value="food">Food & Dining</option>
-              <option value="hotel">Hotel</option>
-              <option value="flight">Flight</option>
-              <option value="note">Note</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label for="edit-item-day">Day #</label>
-            <input type="number" id="edit-item-day" min="1" required>
-          </div>
-          <div class="form-group flex-1">
-            <label for="edit-item-timeblock">Block</label>
-            <select id="edit-item-timeblock">
-              <option value="morning">Morning</option>
-              <option value="afternoon">Afternoon</option>
-              <option value="evening">Evening</option>
-              <option value="night">Night</option>
-            </select>
-          </div>
-          <div class="form-group flex-1">
-            <label for="edit-item-time">Time</label>
-            <input type="time" id="edit-item-time">
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="edit-item-location">Location / Address</label>
-          <input type="text" id="edit-item-location">
-        </div>
-        <div class="form-group">
-          <label for="edit-item-website">Website URL</label>
-          <input type="url" id="edit-item-website">
-        </div>
-        <div class="form-group">
-          <label for="edit-item-notes">Notes & Details</label>
-          <textarea id="edit-item-notes" rows="2"></textarea>
-        </div>
-        <div class="modal-footer space-between">
-          <button type="button" id="btn-delete-item" class="btn-danger">Delete Item</button>
-          <div class="btn-group">
-            <button type="button" class="btn-subtle" data-close="modal-edit-item">Cancel</button>
-            <button type="submit" class="btn-primary">Save Changes</button>
-          </div>
-        </div>
-      </form>
-    </div>
-  <!-- MODAL: IMPORT EXISTING PLAN -->
-  <div id="modal-import-plan" class="modal-overlay">
-    <div class="modal-dialog" style="max-width: 680px;">
-      <div class="modal-header">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:24px;">📋</span>
-          <div>
-            <h3>Paste & Import Existing Plan</h3>
-            <p style="font-size:12px; color:var(--text-muted);">AI converts messy notes, emails, or bookings into your Voyage itinerary.</p>
-          </div>
-        </div>
-        <button class="modal-close" data-close="modal-import-plan">✕</button>
-      </div>
-      <form id="form-import-plan" class="modal-body">
-        <div class="form-group">
-          <label for="import-plan-text">Paste Existing Plan / Notes *</label>
-          <textarea id="import-plan-text" rows="8" placeholder="Paste your itinerary here... For example:
-
-Day 1: Arrive in Paris 10:30am on flight AF 007. Check into Hotel Le Marais. Lunch at Cafe de Flore. Afternoon visit to the Louvre Museum. Evening Seine River cruise at 8pm.
-Day 2: Morning visit to Versailles Palace. Dinner at Le Relais de l'Entrecôte.
-Flight home on Sunday 4pm." required></textarea>
-        </div>
-
-        <div class="form-group">
-          <label>Import Target</label>
-          <div class="provider-radio-group">
-            <label class="radio-card">
-              <input type="radio" name="import-mode" value="new" checked>
-              <div class="radio-content">
-                <strong>Create as New Trip</strong>
-                <span>Extracts destination & creates a separate new trip</span>
-              </div>
-            </label>
-            <label class="radio-card">
-              <input type="radio" name="import-mode" value="current">
-              <div class="radio-content">
-                <strong>Add to Current Trip</strong>
-                <span id="import-current-trip-name">Append items into active trip</span>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <div id="import-status-box" class="test-result-box" style="display:none;"></div>
-
-        <div class="modal-footer space-between">
-          <span style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
-            ⚡ Powered by <strong id="import-provider-pill" style="color:#a5b4fc;">AI</strong>
-          </span>
-          <div class="btn-group">
-            <button type="button" class="btn-subtle" data-close="modal-import-plan">Cancel</button>
-            <button type="submit" id="btn-submit-import" class="btn-primary">✨ Convert & Import</button>
-          </div>
-        </div>
-      </form>
     </div>
   </div>
 
