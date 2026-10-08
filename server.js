@@ -636,6 +636,178 @@ Provide 12-18 essential and destination-specific packing items.`;
   }
 });
 
+// ----------------- AI IMPORT: PARSE & IMPORT EXISTING PLAN -----------------
+app.post('/api/trips/import-plan', async (req, res) => {
+  try {
+    const { rawPlan, importMode, targetTripId } = req.body;
+    if (!rawPlan || !rawPlan.trim()) {
+      return res.status(400).json({ error: 'Please paste your existing plan text' });
+    }
+
+    const systemPrompt = `You are Voyage Itinerary Parser AI.
+Your job is to read unstructured, messy, or formatted trip plans, emails, notes, bullet points, or travel bookings, and extract a complete, organized travel itinerary.
+Return ONLY valid JSON matching this exact schema with NO markdown fences, no conversational text:
+{
+  "destination": "City, Country or Region",
+  "title": "Descriptive catchy Trip Title",
+  "startDate": "YYYY-MM-DD" or "",
+  "endDate": "YYYY-MM-DD" or "",
+  "travelers": "e.g. 2 Adults or Solo Traveler",
+  "travelStyle": "e.g. Cultural & Foodie, Backpacking, Luxury, Family",
+  "targetBudget": number (estimated total budget or 0),
+  "currency": "USD" | "EUR" | "GBP" | "JPY" | "CAD" | "AUD",
+  "notes": "Key trip notes, emergency info, flight numbers or general tips",
+  "items": [
+    {
+      "day": number (1, 2, 3...),
+      "timeBlock": "morning" | "afternoon" | "evening" | "night",
+      "time": "HH:MM",
+      "category": "flight" | "hotel" | "food" | "activity" | "note",
+      "title": "Concise name of place, flight, or activity",
+      "location": "Address, city, or landmark name",
+      "cost": number (estimated cost or 0),
+      "websiteUrl": "URL if present or empty string",
+      "notes": "Booking confirmation, instructions, tips, or details"
+    }
+  ],
+  "packingList": [
+    { "category": "Clothing" | "Documents" | "Electronics" | "Toiletries" | "Health" | "Gear", "text": "Item text" }
+  ],
+  "expenses": [
+    { "title": "Expense description", "category": "Flights" | "Hotels" | "Food" | "Activities" | "Transit", "amount": number }
+  ]
+}`;
+
+    const prompt = `Parse and convert the following existing travel plan text into the structured JSON schema:
+
+=== RAW PLAN TEXT ===
+${rawPlan}
+=== END RAW PLAN TEXT ===
+
+Extract all days, scheduled events, flights, hotels, food spots, and notes accurately. If dates or days are not explicitly numbered, organize them into sequential Days starting at Day 1. Infer sensible times and time blocks (morning, afternoon, evening, night).`;
+
+    const aiOutput = await callAiService({
+      prompt,
+      systemPrompt,
+      settings: db.settings
+    });
+
+    let jsonStr = aiOutput.trim();
+    if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
+    if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
+    if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
+    jsonStr = jsonStr.trim();
+
+    const parsed = JSON.parse(jsonStr);
+
+    if (importMode === 'current' && targetTripId) {
+      const trip = db.trips.find(t => t.id === targetTripId);
+      if (!trip) return res.status(404).json({ error: 'Target trip not found' });
+
+      // Append items
+      trip.items = trip.items || [];
+      if (Array.isArray(parsed.items)) {
+        parsed.items.forEach(item => {
+          trip.items.push({
+            id: 'item_' + crypto.randomUUID().slice(0, 8),
+            day: Number(item.day) || 1,
+            timeBlock: item.timeBlock || 'morning',
+            time: item.time || '10:00',
+            category: item.category || 'activity',
+            title: item.title,
+            location: item.location || '',
+            mapUrl: item.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}` : '',
+            websiteUrl: item.websiteUrl || '',
+            cost: Number(item.cost) || 0,
+            notes: item.notes || ''
+          });
+        });
+      }
+
+      // Append packing
+      trip.packingList = trip.packingList || [];
+      if (Array.isArray(parsed.packingList)) {
+        parsed.packingList.forEach(p => {
+          trip.packingList.push({
+            id: 'pack_' + crypto.randomUUID().slice(0, 8),
+            category: p.category || 'General',
+            text: p.text,
+            checked: false
+          });
+        });
+      }
+
+      // Append expenses
+      trip.expenses = trip.expenses || [];
+      if (Array.isArray(parsed.expenses)) {
+        parsed.expenses.forEach(e => {
+          trip.expenses.push({
+            id: 'exp_' + crypto.randomUUID().slice(0, 8),
+            title: e.title,
+            category: e.category || 'General',
+            amount: Number(e.amount) || 0,
+            currency: trip.currency || 'USD',
+            paidBy: 'Self'
+          });
+        });
+      }
+
+      saveDb(db);
+      return res.json({ success: true, trip });
+    } else {
+      // Create new trip
+      const newTrip = {
+        id: 'trip_' + crypto.randomUUID().slice(0, 8),
+        title: parsed.title || `Trip to ${parsed.destination || 'Destination'}`,
+        destination: parsed.destination || 'Destination',
+        startDate: parsed.startDate || '',
+        endDate: parsed.endDate || '',
+        travelers: parsed.travelers || '2 Travelers',
+        travelStyle: parsed.travelStyle || 'Exploration',
+        targetBudget: Number(parsed.targetBudget) || 0,
+        currency: parsed.currency || 'USD',
+        notes: parsed.notes || '',
+        shareToken: crypto.randomBytes(16).toString('hex'),
+        createdAt: new Date().toISOString(),
+        items: (parsed.items || []).map(item => ({
+          id: 'item_' + crypto.randomUUID().slice(0, 8),
+          day: Number(item.day) || 1,
+          timeBlock: item.timeBlock || 'morning',
+          time: item.time || '10:00',
+          category: item.category || 'activity',
+          title: item.title,
+          location: item.location || '',
+          mapUrl: item.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}` : '',
+          websiteUrl: item.websiteUrl || '',
+          cost: Number(item.cost) || 0,
+          notes: item.notes || ''
+        })),
+        packingList: (parsed.packingList || []).map(p => ({
+          id: 'pack_' + crypto.randomUUID().slice(0, 8),
+          category: p.category || 'General',
+          text: p.text,
+          checked: false
+        })),
+        expenses: (parsed.expenses || []).map(e => ({
+          id: 'exp_' + crypto.randomUUID().slice(0, 8),
+          title: e.title,
+          category: e.category || 'General',
+          amount: Number(e.amount) || 0,
+          currency: parsed.currency || 'USD',
+          paidBy: 'Self'
+        }))
+      };
+
+      db.trips.unshift(newTrip);
+      saveDb(db);
+      return res.status(201).json({ success: true, trip: newTrip });
+    }
+  } catch (err) {
+    console.error('Error importing plan:', err);
+    res.status(500).json({ error: err.message || 'Failed to parse and import plan' });
+  }
+});
+
 // ----------------- WEATHER FORECAST (OPEN-METEO) -----------------
 app.get('/api/weather', async (req, res) => {
   try {

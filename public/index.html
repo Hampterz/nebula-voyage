@@ -25,6 +25,7 @@
           <option value="">Loading trips...</option>
         </select>
         <button id="btn-new-trip" class="btn-subtle" title="Create a new trip">+ New Trip</button>
+        <button id="btn-open-import" class="btn-subtle" title="Paste and import an existing plan with AI">📋 Import Plan</button>
       </div>
     </div>
 
@@ -554,6 +555,62 @@
           <div class="btn-group">
             <button type="button" class="btn-subtle" data-close="modal-edit-item">Cancel</button>
             <button type="submit" class="btn-primary">Save Changes</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  <!-- MODAL: IMPORT EXISTING PLAN -->
+  <div id="modal-import-plan" class="modal-overlay">
+    <div class="modal-dialog" style="max-width: 680px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:24px;">📋</span>
+          <div>
+            <h3>Paste & Import Existing Plan</h3>
+            <p style="font-size:12px; color:var(--text-muted);">AI converts messy notes, emails, or bookings into your Voyage itinerary.</p>
+          </div>
+        </div>
+        <button class="modal-close" data-close="modal-import-plan">✕</button>
+      </div>
+      <form id="form-import-plan" class="modal-body">
+        <div class="form-group">
+          <label for="import-plan-text">Paste Existing Plan / Notes *</label>
+          <textarea id="import-plan-text" rows="8" placeholder="Paste your itinerary here... For example:
+
+Day 1: Arrive in Paris 10:30am on flight AF 007. Check into Hotel Le Marais. Lunch at Cafe de Flore. Afternoon visit to the Louvre Museum. Evening Seine River cruise at 8pm.
+Day 2: Morning visit to Versailles Palace. Dinner at Le Relais de l'Entrecôte.
+Flight home on Sunday 4pm." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Import Target</label>
+          <div class="provider-radio-group">
+            <label class="radio-card">
+              <input type="radio" name="import-mode" value="new" checked>
+              <div class="radio-content">
+                <strong>Create as New Trip</strong>
+                <span>Extracts destination & creates a separate new trip</span>
+              </div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="import-mode" value="current">
+              <div class="radio-content">
+                <strong>Add to Current Trip</strong>
+                <span id="import-current-trip-name">Append items into active trip</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div id="import-status-box" class="test-result-box" style="display:none;"></div>
+
+        <div class="modal-footer space-between">
+          <span style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+            ⚡ Powered by <strong id="import-provider-pill" style="color:#a5b4fc;">AI</strong>
+          </span>
+          <div class="btn-group">
+            <button type="button" class="btn-subtle" data-close="modal-import-plan">Cancel</button>
+            <button type="submit" id="btn-submit-import" class="btn-primary">✨ Convert & Import</button>
           </div>
         </div>
       </form>

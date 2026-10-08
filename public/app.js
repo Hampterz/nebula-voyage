@@ -57,6 +57,7 @@ function setupNavigation() {
   });
 
   btnNewTrip.addEventListener('click', () => openModal(modalNewTrip));
+  document.getElementById('btn-open-import').addEventListener('click', openImportModal);
   btnShare.addEventListener('click', () => openShareModal());
   btnSettings.addEventListener('click', () => openSettingsModal());
 }
@@ -844,6 +845,86 @@ function setupForms() {
       document.getElementById('settings-ollama-fields').style.display = e.target.value === 'ollama' ? 'flex' : 'none';
     });
   });
+
+  // Import Existing Plan Form
+  const formImport = document.getElementById('form-import-plan');
+  if (formImport) {
+    formImport.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const rawPlan = document.getElementById('import-plan-text').value.trim();
+      const mode = document.querySelector('input[name="import-mode"]:checked')?.value || 'new';
+      const statusBox = document.getElementById('import-status-box');
+      const submitBtn = document.getElementById('btn-submit-import');
+
+      if (!rawPlan) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Parsing with AI...';
+      statusBox.style.display = 'block';
+      statusBox.style.color = '#38bdf8';
+      statusBox.style.background = 'rgba(56, 189, 248, 0.1)';
+      statusBox.textContent = `Analyzing and structuring your travel plan with ${appSettings?.aiProvider === 'gemini' ? (appSettings.geminiModel || 'Gemini') : 'Ollama'}...`;
+
+      try {
+        const res = await fetch('/api/trips/import-plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rawPlan,
+            importMode: mode,
+            targetTripId: activeTripId
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Import failed');
+
+        statusBox.style.color = '#34d399';
+        statusBox.style.background = 'rgba(16, 185, 129, 0.15)';
+        statusBox.textContent = '✓ Trip plan successfully parsed and converted into your itinerary!';
+
+        setTimeout(async () => {
+          closeModal(document.getElementById('modal-import-plan'));
+          formImport.reset();
+          submitBtn.disabled = false;
+          submitBtn.textContent = '✨ Convert & Import';
+          if (data.trip?.id) {
+            activeTripId = data.trip.id;
+          }
+          await loadTrips();
+          if (activeTripId) await loadTripDetails(activeTripId);
+        }, 900);
+      } catch (err) {
+        statusBox.style.color = '#fb7185';
+        statusBox.style.background = 'rgba(244, 63, 94, 0.15)';
+        statusBox.textContent = `✕ Error: ${err.message}`;
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✨ Convert & Import';
+      }
+    });
+  }
+}
+
+function openImportModal() {
+  const modal = document.getElementById('modal-import-plan');
+  const tripNameSpan = document.getElementById('import-current-trip-name');
+  const providerPill = document.getElementById('import-provider-pill');
+  const statusBox = document.getElementById('import-status-box');
+
+  if (currentTrip) {
+    tripNameSpan.textContent = `Append into "${currentTrip.title || currentTrip.destination}"`;
+  } else {
+    tripNameSpan.textContent = 'No active trip (will create new)';
+  }
+
+  if (appSettings) {
+    providerPill.textContent = appSettings.aiProvider === 'gemini' 
+      ? (appSettings.geminiModel || 'Gemini 3.8 Flash') 
+      : (appSettings.ollamaModel || 'Local Ollama');
+  }
+
+  if (statusBox) statusBox.style.display = 'none';
+  openModal(modal);
 }
 
 function openEditItemModal(item) {
