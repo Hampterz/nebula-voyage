@@ -1550,11 +1550,15 @@ function initLiquidGlassShader() {
     resolution: gl.getUniformLocation(program, 'iResolution'),
     time: gl.getUniformLocation(program, 'iTime'),
     mouse: gl.getUniformLocation(program, 'iMouse'),
-    texture: gl.getUniformLocation(program, 'iChannel0')
+    texture: gl.getUniformLocation(program, 'iChannel0'),
+    texResolution: gl.getUniformLocation(program, 'uTextureResolution'),
+    numLenses: gl.getUniformLocation(program, 'uNumLenses'),
+    lenses: gl.getUniformLocation(program, 'uLenses'),
+    lensParams: gl.getUniformLocation(program, 'uLensParams')
   };
 
-  let mouse = [canvas.width / 2, canvas.height / 2];
-  let targetMouse = [canvas.width / 2, canvas.height / 2];
+  let mouse = [-2000, -2000];
+  let targetMouse = [-2000, -2000];
 
   window.addEventListener('mousemove', (e) => {
     targetMouse = [e.clientX, canvas.height - e.clientY];
@@ -1584,11 +1588,15 @@ function initLiquidGlassShader() {
     if (!img.src) img.src = '/liquid_ocean_bg.jpg';
   }
 
+  const maxLenses = 8;
+  const flatLenses = new Float32Array(maxLenses * 4);
+  const flatParams = new Float32Array(maxLenses * 4);
+
   const startTime = performance.now();
   const render = () => {
-    // Smooth fluid lerp for mouse coordinates
-    mouse[0] += (targetMouse[0] - mouse[0]) * 0.08;
-    mouse[1] += (targetMouse[1] - mouse[1]) * 0.08;
+    // Smooth fluid lerp for mouse cursor lighting
+    mouse[0] += (targetMouse[0] - mouse[0]) * 0.12;
+    mouse[1] += (targetMouse[1] - mouse[1]) * 0.12;
 
     const currentTime = (performance.now() - startTime) / 1000;
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -1597,6 +1605,85 @@ function initLiquidGlassShader() {
     gl.uniform3f(uniforms.resolution, canvas.width, canvas.height, 1.0);
     gl.uniform1f(uniforms.time, currentTime);
     gl.uniform4f(uniforms.mouse, mouse[0], mouse[1], 0, 0);
+    gl.uniform2f(uniforms.texResolution, img.naturalWidth || 1920, img.naturalHeight || 1080);
+
+    // Dynamically evaluate visible UI elements for real liquid glass refraction
+    let lensCount = 0;
+    flatLenses.fill(0);
+    flatParams.fill(0);
+
+    const addLens = (el, defaultRadius = 24) => {
+      if (!el || lensCount >= maxLenses) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      // Viewport culling
+      if (rect.bottom < -60 || rect.top > window.innerHeight + 60) return;
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return;
+
+      const cx = rect.left + rect.width * 0.5;
+      const cy = canvas.height - (rect.top + rect.height * 0.5);
+      const hw = rect.width * 0.5;
+      const hh = rect.height * 0.5;
+
+      let r = defaultRadius;
+      if (el.classList.contains('dock-inner') || (style.borderRadius && style.borderRadius.includes('9999px'))) {
+        r = Math.min(hw, hh);
+      } else if (style.borderRadius) {
+        const parsed = parseFloat(style.borderRadius);
+        if (!isNaN(parsed) && parsed > 0) r = Math.min(parsed, Math.min(hw, hh));
+      }
+
+      const idx = lensCount * 4;
+      flatLenses[idx] = cx;
+      flatLenses[idx + 1] = cy;
+      flatLenses[idx + 2] = hw;
+      flatLenses[idx + 3] = hh;
+
+      flatParams[idx] = r;
+      flatParams[idx + 1] = 1.0;
+      flatParams[idx + 2] = 1.0;
+      flatParams[idx + 3] = 0.0;
+      lensCount++;
+    };
+
+    // 1. Highest priority: Active modal sheet if open
+    const activeModal = document.querySelector('.modal-backdrop.active .modal-sheet');
+    if (activeModal) {
+      addLens(activeModal, 28);
+    }
+
+    // 2. Persistent Top Navigation Dock
+    const dock = document.querySelector('.dock-inner');
+    if (dock) {
+      addLens(dock, 30);
+    }
+
+    // 3. Prominent active tab components
+    const activeTab = document.querySelector('.tab-view.active');
+    if (activeTab) {
+      const selectors = [
+        '#featured-trip-container .trip-hero-glass-card',
+        '.import-conversion-banner',
+        '.ai-planner-deck',
+        '.itinerary-meta-deck',
+        '.day-selector-dock',
+        '#itinerary-col-map',
+        '.itinerary-schedule-chamber',
+        '.settings-deck',
+        '.trip-vault-card'
+      ];
+      for (let s = 0; s < selectors.length && lensCount < maxLenses; s++) {
+        const els = activeTab.querySelectorAll(selectors[s]);
+        for (let j = 0; j < els.length && lensCount < maxLenses; j++) {
+          addLens(els[j], 22);
+        }
+      }
+    }
+
+    gl.uniform1i(uniforms.numLenses, lensCount);
+    gl.uniform4fv(uniforms.lenses, flatLenses);
+    gl.uniform4fv(uniforms.lensParams, flatParams);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
