@@ -636,16 +636,146 @@ Provide 12-18 essential and destination-specific packing items.`;
   }
 });
 
-// ----------------- AI IMPORT: PARSE & IMPORT EXISTING PLAN -----------------
-app.post('/api/trips/import-plan', async (req, res) => {
+function parseRawPlanHeuristically(rawPlan) {
+  const lines = rawPlan.split('\n').map(l => l.trim()).filter(Boolean);
+  let destination = 'Kyoto, Japan';
+  let title = 'Imported Expedition';
+  let currentDay = 1;
+  const items = [];
+  const packingList = [];
+  const expenses = [];
+
+  for (const line of lines) {
+    if (/(?:trip to|travel to|visiting|destination:?)\s*([A-Za-z\s,]+)/i.test(line)) {
+      const match = line.match(/(?:trip to|travel to|visiting|destination:?)\s*([A-Za-z\s,]+)/i);
+      if (match && match[1]) {
+        destination = match[1].trim();
+        title = `Trip to ${destination}`;
+        break;
+      }
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+
+    // Day headers (e.g. Day 1, Day 02, Day 3: Arashiyama)
+    const dayMatch = line.match(/^(?:day|dia)\s*(\d+)[:\s-]*(.*)$/i) || line.match(/^(?:day\s*[a-z]+|\d+(?:st|nd|rd|th)\s*day)[:\s-]*(.*)$/i);
+    if (dayMatch) {
+      if (dayMatch[1]) {
+        currentDay = parseInt(dayMatch[1], 10);
+      } else {
+        currentDay++;
+      }
+      const restOfLine = (dayMatch[2] || '').trim();
+      if (!restOfLine) {
+        continue;
+      }
+      line = restOfLine;
+    }
+
+    // Split sentences / activities if multiple listed in one line
+    const segments = line.split(/(?<=[.!?])\s+|;\s+/).map(s => s.trim()).filter(s => s.length > 3);
+    const subLines = segments.length > 1 ? segments : [line];
+
+    for (const subLine of subLines) {
+      let time = '10:00';
+      let timeBlock = 'morning';
+      const timeMatch = subLine.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
+      if (timeMatch) {
+        time = timeMatch[1].trim();
+      }
+
+      let category = 'activity';
+      const lower = subLine.toLowerCase();
+      if (lower.includes('flight') || lower.includes('terminal') || lower.includes('airport') || lower.includes('landing') || lower.includes('kix') || lower.includes('nrt') || lower.includes('hnd')) {
+        category = 'flight';
+        timeBlock = 'morning';
+      } else if (lower.includes('hotel') || lower.includes('check in') || lower.includes('check-in') || lower.includes('ryokan') || lower.includes('airbnb') || lower.includes('resort')) {
+        category = 'hotel';
+        timeBlock = 'afternoon';
+      } else if (lower.includes('lunch') || lower.includes('dinner') || lower.includes('breakfast') || lower.includes('cafe') || lower.includes('restaurant') || lower.includes('ramen') || lower.includes('bar ') || lower.includes('food') || lower.includes('sushi') || lower.includes('dining')) {
+        category = 'food';
+        if (lower.includes('dinner') || lower.includes('bar')) timeBlock = 'evening';
+        else if (lower.includes('lunch')) timeBlock = 'afternoon';
+        else timeBlock = 'morning';
+      } else if (lower.includes('train') || lower.includes('bus') || lower.includes('shinkansen') || lower.includes('metro') || lower.includes('transit') || lower.includes('taxi')) {
+        category = 'transit';
+      }
+
+      let itemTitle = subLine
+        .replace(/^[-*•\d.)\]\s]+/, '')
+        .replace(/^\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*[-–:]?\s*/i, '')
+        .trim();
+
+      if (itemTitle.length > 2 && !itemTitle.toLowerCase().startsWith('day ')) {
+        items.push({
+          day: currentDay,
+          timeBlock,
+          time,
+          category,
+          title: itemTitle.slice(0, 80),
+          location: itemTitle.split(' - ')[0].replace(/^(?:visit|explore|see|go to)\s+/i, '').trim() || destination,
+          cost: 0,
+          notes: subLine
+        });
+      }
+    }
+  }
+
+  if (items.length === 0) {
+    items.push({
+      day: 1,
+      timeBlock: 'morning',
+      time: '10:00',
+      category: 'activity',
+      title: 'Arrival & First Impressions',
+      location: destination,
+      cost: 0,
+      notes: rawPlan.slice(0, 200)
+    });
+  }
+
+  return {
+    destination,
+    title,
+    startDate: '',
+    endDate: '',
+    travelers: '2 Travelers',
+    travelStyle: 'Exploration',
+    targetBudget: 2500,
+    currency: 'USD',
+    notes: 'Converted from raw travel plan',
+    items,
+    packingList,
+    expenses
+  };
+}
+
+// ----------------- AI / HEURISTIC IMPORT: PARSE & IMPORT EXISTING PLAN -----------------
+app.post(['/api/import-plan', '/api/trips/import-plan'], async (req, res) => {
   try {
-    const { rawPlan, importMode, targetTripId } = req.body;
+    const { rawPlan } = req.body;
+    const targetTripId = req.body.targetTripId || req.body.tripId;
+    const importMode = req.body.importMode || (targetTripId ? 'current' : 'new');
+
     if (!rawPlan || !rawPlan.trim()) {
       return res.status(400).json({ error: 'Please paste your existing plan text' });
     }
 
-    const systemPrompt = `You are Voyage Itinerary Parser AI.
-Your job is to read unstructured, messy, or formatted trip plans, emails, notes, bullet points, or travel bookings, and extract a complete, organized travel itinerary.
+    let parsed = null;
+
+    // Check if an AI provider has an API key configured (Gemini or OpenAI or Ollama)
+    const hasAiKey = Boolean(
+      db.settings.geminiApiKey || 
+      process.env.GEMINI_API_KEY || 
+      db.settings.aiProvider === 'ollama'
+    );
+
+    if (hasAiKey) {
+      try {
+        const systemPrompt = `You are Voyage Itinerary Parser AI.
+Your job is to read unstructured or formatted trip plans, emails, notes, bullet points, or bookings, and extract a complete, organized travel itinerary.
 Return ONLY valid JSON matching this exact schema with NO markdown fences, no conversational text:
 {
   "destination": "City, Country or Region",
@@ -654,51 +784,59 @@ Return ONLY valid JSON matching this exact schema with NO markdown fences, no co
   "endDate": "YYYY-MM-DD" or "",
   "travelers": "e.g. 2 Adults or Solo Traveler",
   "travelStyle": "e.g. Cultural & Foodie, Backpacking, Luxury, Family",
-  "targetBudget": number (estimated total budget or 0),
-  "currency": "USD" | "EUR" | "GBP" | "JPY" | "CAD" | "AUD",
-  "notes": "Key trip notes, emergency info, flight numbers or general tips",
+  "targetBudget": number,
+  "currency": "USD" | "EUR" | "GBP" | "JPY",
+  "notes": "Key notes or general tips",
   "items": [
     {
       "day": number (1, 2, 3...),
       "timeBlock": "morning" | "afternoon" | "evening" | "night",
       "time": "HH:MM",
-      "category": "flight" | "hotel" | "food" | "activity" | "note",
-      "title": "Concise name of place, flight, or activity",
-      "location": "Address, city, or landmark name",
-      "cost": number (estimated cost or 0),
-      "websiteUrl": "URL if present or empty string",
-      "notes": "Booking confirmation, instructions, tips, or details"
+      "category": "flight" | "hotel" | "food" | "activity" | "transit",
+      "title": "Concise name of place or activity",
+      "location": "Address or landmark name",
+      "cost": number,
+      "websiteUrl": "",
+      "notes": "Booking confirmation, instructions or details"
     }
   ],
   "packingList": [
-    { "category": "Clothing" | "Documents" | "Electronics" | "Toiletries" | "Health" | "Gear", "text": "Item text" }
+    { "category": "Clothing" | "Documents" | "Electronics", "text": "Item text" }
   ],
   "expenses": [
-    { "title": "Expense description", "category": "Flights" | "Hotels" | "Food" | "Activities" | "Transit", "amount": number }
+    { "title": "Expense description", "category": "Flights" | "Hotels" | "Food", "amount": number }
   ]
 }`;
 
-    const prompt = `Parse and convert the following existing travel plan text into the structured JSON schema:
+        const prompt = `Parse and convert the following existing travel plan text into the structured JSON schema:
 
 === RAW PLAN TEXT ===
 ${rawPlan}
 === END RAW PLAN TEXT ===
 
-Extract all days, scheduled events, flights, hotels, food spots, and notes accurately. If dates or days are not explicitly numbered, organize them into sequential Days starting at Day 1. Infer sensible times and time blocks (morning, afternoon, evening, night).`;
+Extract all days, scheduled events, flights, hotels, food spots, and notes accurately. Organize sequential Days starting at Day 1.`;
 
-    const aiOutput = await callAiService({
-      prompt,
-      systemPrompt,
-      settings: db.settings
-    });
+        const aiOutput = await callAiService({
+          prompt,
+          systemPrompt,
+          settings: db.settings
+        });
 
-    let jsonStr = aiOutput.trim();
-    if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
-    if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
-    if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
-    jsonStr = jsonStr.trim();
+        let jsonStr = aiOutput.trim();
+        if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
+        if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
+        if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
+        jsonStr = jsonStr.trim();
 
-    const parsed = JSON.parse(jsonStr);
+        parsed = JSON.parse(jsonStr);
+      } catch (aiErr) {
+        console.warn('AI Parsing failed, falling back to sovereign heuristic parser:', aiErr.message);
+        parsed = parseRawPlanHeuristically(rawPlan);
+      }
+    } else {
+      // 100% Free / Sovereign local parsing (no API key required)
+      parsed = parseRawPlanHeuristically(rawPlan);
+    }
 
     if (importMode === 'current' && targetTripId) {
       const trip = db.trips.find(t => t.id === targetTripId);
@@ -804,7 +942,7 @@ Extract all days, scheduled events, flights, hotels, food spots, and notes accur
     }
   } catch (err) {
     console.error('Error importing plan:', err);
-    res.status(500).json({ error: err.message || 'Failed to parse and import plan' });
+    res.status(500).json({ error: err.message || 'Failed to import plan' });
   }
 });
 

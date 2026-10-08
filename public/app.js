@@ -22,6 +22,8 @@ let wishlistItems = [
 
 // Document Ready Initialization
 window.addEventListener('DOMContentLoaded', async () => {
+  initLiquidGlassShader();
+  initInteractiveGlassLighting();
   setupNavigation();
   setupModals();
   setupForms();
@@ -150,9 +152,30 @@ function setupModals() {
     });
   }
 
-  const btnImportPlan = document.getElementById('btn-hub-import-plan');
-  if (btnImportPlan) {
-    btnImportPlan.addEventListener('click', () => openModal(document.getElementById('modal-import-plan')));
+  // Import Plan Triggers (Hub, AI Planner, Itinerary)
+  const importBtns = [
+    document.getElementById('btn-hub-import-plan'),
+    document.getElementById('btn-ai-import-plan'),
+    document.getElementById('btn-itinerary-import-plan')
+  ];
+  importBtns.forEach(btn => {
+    if (btn) {
+      btn.addEventListener('click', () => openModal(document.getElementById('modal-import-plan')));
+    }
+  });
+
+  // Fast Sample Itinerary Filler
+  const btnSampleImport = document.getElementById('btn-load-sample-import');
+  if (btnSampleImport) {
+    btnSampleImport.addEventListener('click', () => {
+      const textarea = document.getElementById('textarea-import-raw');
+      if (textarea) {
+        textarea.value = `Day 1: Arrive Osaka KIX 09:15 AM. Haruka Express train to Kyoto Station. Check in at Hotel Kanra Kyoto. Lunch at Men-ya Inoichi (Michelin Bib Gourmand ramen). Afternoon stroll through Nishiki Market. Evening cocktail at Bar Rocking Chair in Gion.
+Day 2: Early morning hike through Fushimi Inari Taisha 1,000 torii gates (07:30 AM). Midday green tea tasting at Tsuen Tea in Uji. Afternoon Zen rock garden meditation at Daitoku-ji. Kaiseki dinner in Pontocho Alley.
+Day 3: Sunrise bamboo walk in Arashiyama (08:00 AM). Tenryu-ji garden, Togetsukyo Bridge, and Monkey Park. Shinkansen bullet train departure to Tokyo.`;
+        showToast('Sample Kyoto plan populated!');
+      }
+    });
   }
 
   const btnAddStop = document.getElementById('btn-itinerary-add-stop');
@@ -900,9 +923,10 @@ function initMap() {
     attributionControl: false
   }).setView([35.0116, 135.7681], 12); // Default to Kyoto coordinates
 
-  // CartoDB Voyager / Dark Matter Layer
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19
+  // 100% Free OpenStreetMap Layer (Zero API Key Required)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
   }).addTo(leafletMap);
 
   L.control.zoom({ position: 'bottomright' }).addTo(leafletMap);
@@ -1235,32 +1259,56 @@ function setupForms() {
       e.preventDefault();
       const rawText = document.getElementById('textarea-import-raw').value.trim();
       const btnSubmit = document.getElementById('btn-submit-import');
-      if (!rawText || !currentTrip) return;
+      if (!rawText) return;
+
+      const modeRadio = document.querySelector('input[name="import-target-mode"]:checked');
+      const importMode = modeRadio ? modeRadio.value : (currentTrip ? 'current' : 'new');
 
       btnSubmit.disabled = true;
-      btnSubmit.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Synthesizing Plan...</span>`;
+      btnSubmit.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Converting Plan...</span>`;
 
       try {
+        const payload = {
+          rawPlan: rawText,
+          importMode,
+          targetTripId: (importMode === 'current' && currentTrip) ? currentTrip.id : null,
+          tripId: (importMode === 'current' && currentTrip) ? currentTrip.id : null
+        };
+
         const res = await fetch('/api/import-plan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tripId: currentTrip.id, rawPlan: rawText })
+          body: JSON.stringify(payload)
         });
+
         if (res.ok) {
+          const data = await res.json();
           closeModal(document.getElementById('modal-import-plan'));
           formImport.reset();
-          await loadActiveTrip(currentTrip.id);
-          showToast('Itinerary synthesized and added to vault!');
+
+          await loadTrips();
+          const targetId = (data.trip && data.trip.id) ? data.trip.id : (currentTrip ? currentTrip.id : null);
+          if (targetId) {
+            await loadActiveTrip(targetId);
+          }
+          showToast('Itinerary converted to Nebula Voyage successfully!');
           switchTab('master-itinerary');
+          if (leafletMap) {
+            setTimeout(() => {
+              leafletMap.invalidateSize();
+              fitMapToMarkers();
+            }, 300);
+          }
         } else {
-          throw new Error('Import failed');
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Conversion failed');
         }
       } catch (err) {
         console.error(err);
-        showToast('Synthesis failed. Check model settings.', 'error');
+        showToast(err.message || 'Plan conversion failed.', 'error');
       } finally {
         btnSubmit.disabled = false;
-        btnSubmit.innerHTML = `<span class="material-symbols-outlined text-[18px]">auto_awesome</span><span>Synthesize into Itinerary</span>`;
+        btnSubmit.innerHTML = `<span class="material-symbols-outlined text-[18px]">auto_awesome</span><span>Convert to Nebula Plan</span>`;
       }
     });
   }
@@ -1429,4 +1477,156 @@ function downloadJSON(data, filename) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// ----------------- REAL LIQUID GLASS WEBGL SHADER ENGINE -----------------
+function initLiquidGlassShader() {
+  const canvas = document.getElementById('liquid-glass-canvas');
+  if (!canvas) return;
+
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) {
+    console.warn('WebGL not supported, falling back to CSS glass.');
+    return;
+  }
+
+  const setCanvasSize = () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  };
+  setCanvasSize();
+
+  const vsSource = `
+    attribute vec2 position;
+    void main() {
+      gl_Position = vec4(position, 0.0, 1.0);
+    }
+  `;
+
+  const fragShaderEl = document.getElementById('fragShader');
+  if (!fragShaderEl) return;
+  const fsSource = fragShaderEl.textContent;
+
+  const createShader = (type, source) => {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      console.warn('Shader compile log:', gl.getShaderInfoLog(shader));
+      gl.deleteShader(shader);
+      return null;
+    }
+    return shader;
+  };
+
+  const vs = createShader(gl.VERTEX_SHADER, vsSource);
+  const fs = createShader(gl.FRAGMENT_SHADER, fsSource);
+  if (!vs || !fs) return;
+
+  const program = gl.createProgram();
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.warn('Shader program link log:', gl.getShaderInfoLog(program));
+    return;
+  }
+  gl.useProgram(program);
+
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+    gl.STATIC_DRAW
+  );
+
+  const position = gl.getAttribLocation(program, 'position');
+  gl.enableVertexAttribArray(position);
+  gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+
+  const uniforms = {
+    resolution: gl.getUniformLocation(program, 'iResolution'),
+    time: gl.getUniformLocation(program, 'iTime'),
+    mouse: gl.getUniformLocation(program, 'iMouse'),
+    texture: gl.getUniformLocation(program, 'iChannel0')
+  };
+
+  let mouse = [canvas.width / 2, canvas.height / 2];
+  let targetMouse = [canvas.width / 2, canvas.height / 2];
+
+  window.addEventListener('mousemove', (e) => {
+    targetMouse = [e.clientX, canvas.height - e.clientY];
+  });
+
+  window.addEventListener('touchmove', (e) => {
+    if (e.touches && e.touches.length > 0) {
+      targetMouse = [e.touches[0].clientX, canvas.height - e.touches[0].clientY];
+    }
+  }, { passive: true });
+
+  const texture = gl.createTexture();
+  const img = document.getElementById('liquidGlassTexture') || new Image();
+
+  const setupTexture = () => {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  };
+
+  if (img.complete && img.naturalWidth !== 0) {
+    setupTexture();
+  } else {
+    img.onload = setupTexture;
+    if (!img.src) img.src = '/liquid_ocean_bg.jpg';
+  }
+
+  const startTime = performance.now();
+  const render = () => {
+    // Smooth fluid lerp for mouse coordinates
+    mouse[0] += (targetMouse[0] - mouse[0]) * 0.08;
+    mouse[1] += (targetMouse[1] - mouse[1]) * 0.08;
+
+    const currentTime = (performance.now() - startTime) / 1000;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.uniform3f(uniforms.resolution, canvas.width, canvas.height, 1.0);
+    gl.uniform1f(uniforms.time, currentTime);
+    gl.uniform4f(uniforms.mouse, mouse[0], mouse[1], 0, 0);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.uniform1i(uniforms.texture, 0);
+
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(render);
+  };
+
+  window.addEventListener('resize', setCanvasSize);
+  render();
+}
+
+// ----------------- INTERACTIVE SPECULAR LIGHTING TRACKER -----------------
+function initInteractiveGlassLighting() {
+  window.addEventListener('mousemove', (e) => {
+    const cards = document.querySelectorAll('.liquid-glass, .btn-liquid-primary, .btn-liquid-subtle');
+    cards.forEach(card => {
+      const rect = card.getBoundingClientRect();
+      if (
+        e.clientX >= rect.left - 80 &&
+        e.clientX <= rect.right + 80 &&
+        e.clientY >= rect.top - 80 &&
+        e.clientY <= rect.bottom + 80
+      ) {
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
+      }
+    });
+  }, { passive: true });
 }

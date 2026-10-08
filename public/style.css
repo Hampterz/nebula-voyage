@@ -1,13 +1,18 @@
 /* ==========================================================================
-   NEBULA VOYAGE · LIQUID SPATIAL GLASS DESIGN SYSTEM
-   Inspired by VisionOS Spatial Computing & Optically-True Liquid Glass Optics
+   NEBULA VOYAGE · REAL LIQUID SPATIAL GLASS DESIGN SYSTEM
+   Mobile-First, Optically Refractive Liquid Glass with Chromatic Dispersion & Live Specular Shine
    ========================================================================== */
 
-:root {
+:root, :host {
   /* Atmosphere & Depth */
   --bg-deep: #06090e;
   --bg-surface: #0d0e10;
   
+  /* Liquid Glass Optical Filters & Variables */
+  --glass-frost: 0.08;
+  --glass-saturation: 1.4;
+  --filter-id: url(#glass-filter-_r_b_);
+
   /* Optic Glass Material Colors */
   --glass-base: rgba(255, 255, 255, 0.07);
   --glass-active: rgba(255, 255, 255, 0.15);
@@ -16,9 +21,9 @@
   
   /* Specular Rim & Borders */
   --border-subtle: rgba(255, 255, 255, 0.14);
-  --border-medium: rgba(255, 255, 255, 0.22);
-  --border-rim-zenith: rgba(255, 255, 255, 0.55);
-  --border-rim-side: rgba(255, 255, 255, 0.32);
+  --border-medium: rgba(255, 255, 255, 0.24);
+  --border-rim-zenith: rgba(255, 255, 255, 0.65);
+  --border-rim-side: rgba(255, 255, 255, 0.35);
   
   /* Typography Luminance */
   --text-primary: #ffffff;
@@ -28,8 +33,8 @@
   
   /* Liquid Ocean Ambient Accents */
   --water-accent: #7dd3fc;
-  --water-glow: rgba(125, 211, 252, 0.15);
-  --water-cyan-specular: rgba(186, 230, 253, 0.4);
+  --water-glow: rgba(125, 211, 252, 0.2);
+  --water-cyan-specular: rgba(186, 230, 253, 0.45);
   --emerald-accent: #34d399;
   --amber-accent: #fbbf24;
   --rose-accent: #fb7185;
@@ -42,13 +47,15 @@
   --radius-xl: 32px;
   --radius-full: 9999px;
   
-  /* Deep Atmospheric Glass Shadows */
+  /* Deep Atmospheric Real Liquid Glass Shadows */
   --shadow-liquid-deep: 
-    0 28px 64px -12px rgba(0, 8, 24, 0.85),
+    0 24px 60px -12px rgba(0, 8, 24, 0.9),
     0 8px 24px -4px rgba(0, 0, 0, 0.5),
-    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.3),
-    inset 0 0 24px 0 rgba(125, 211, 252, 0.05);
+    inset 0 0 2px 1px rgba(255, 255, 255, 0.35),
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.14),
+    inset 0 4px 16px rgba(10, 20, 35, 0.2),
+    inset 0 8px 24px rgba(10, 20, 35, 0.2),
+    inset 0 6px 56px rgba(10, 20, 35, 0.2);
 
   --shadow-liquid-capsule: 
     0 6px 16px -2px rgba(0, 0, 0, 0.4),
@@ -57,8 +64,8 @@
 
   --shadow-liquid-hover:
     0 32px 72px -10px rgba(0, 12, 36, 0.95),
-    0 0 24px 0 rgba(125, 211, 252, 0.18),
-    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.7);
+    0 0 28px 0 rgba(125, 211, 252, 0.25),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.5);
 }
 
 /* Base Reset & Typography */
@@ -94,6 +101,18 @@ body {
   position: relative;
 }
 
+/* Real Liquid Glass Interactive WebGL Canvas */
+.liquid-glass-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.85;
+  display: block;
+}
+
 /* Ambient Optical Water Wave Overlay */
 body::before {
   content: '';
@@ -106,8 +125,8 @@ body::before {
 
 /* Hide native scrollbars cleanly */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -131,16 +150,16 @@ body::before {
 }
 
 /* ==========================================================================
-   LIQUID GLASS PRISMATIC UTILITIES
+   REAL LIQUID GLASS PRISMATIC UTILITIES & SHINE DYNAMICS
    ========================================================================== */
 
 /* Main Refractive Liquid Glass Slab */
 .liquid-glass {
   background: 
-    linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 45%, rgba(255, 255, 255, 0.01) 100%),
     radial-gradient(ellipse at 20% 0%, rgba(125, 211, 252, 0.12) 0%, transparent 65%);
-  backdrop-filter: blur(28px) saturate(190%) contrast(108%) brightness(104%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%) contrast(108%) brightness(104%);
+  backdrop-filter: var(--filter-id, url(#glass-filter-_r_b_)) saturate(var(--glass-saturation, 1.4)) blur(24px) contrast(108%) brightness(104%);
+  -webkit-backdrop-filter: var(--filter-id, url(#glass-filter-_r_b_)) saturate(var(--glass-saturation, 1.4)) blur(24px) contrast(108%) brightness(104%);
   border: 1px solid var(--border-medium);
   border-top: 1.5px solid var(--border-rim-zenith);
   border-left: 1.2px solid var(--border-rim-side);
@@ -148,20 +167,66 @@ body::before {
   border-radius: var(--radius-lg);
   position: relative;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
 }
 
-/* Subtle Specular Sheen on Glass Slabs */
+/* Dynamic Interactive Cursor-Tracking Liquid Specular Highlight */
 .liquid-glass::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 40%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 100%);
-  pointer-events: none;
+  inset: 0;
   border-radius: inherit;
+  background: radial-gradient(
+    360px circle at var(--mouse-x, 50%) var(--mouse-y, 0%),
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(125, 211, 252, 0.08) 35%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+
+/* Sweeping Prismatic Caustics & Liquid Glint Animation */
+.liquid-glass::after {
+  content: '';
+  position: absolute;
+  top: -60%;
+  left: -60%;
+  width: 220%;
+  height: 220%;
+  background: linear-gradient(
+    65deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.02) 36%,
+    rgba(125, 211, 252, 0.1) 48%,
+    rgba(255, 255, 255, 0.26) 50%,
+    rgba(167, 139, 250, 0.1) 52%,
+    transparent 65%
+  );
+  transform: rotate(25deg) translateY(-120%);
+  animation: liquidShineSweep 12s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes liquidShineSweep {
+  0% {
+    transform: rotate(25deg) translateY(-120%);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  28% {
+    transform: rotate(25deg) translateY(120%);
+    opacity: 0;
+  }
+  100% {
+    transform: rotate(25deg) translateY(120%);
+    opacity: 0;
+  }
 }
 
 /* Secondary Liquid Glass (Sub-panels / Inner chambers) */
@@ -175,7 +240,7 @@ body::before {
   border-radius: var(--radius-md);
 }
 
-/* Liquid Pill Capsules (Like Files, Storage, Live Usage in reference image) */
+/* Liquid Pill Capsules */
 .liquid-capsule {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.04) 100%);
   backdrop-filter: blur(24px) saturate(180%);
@@ -196,7 +261,6 @@ body::before {
     0 10px 24px -2px rgba(0, 0, 0, 0.5),
     0 0 16px rgba(125, 211, 252, 0.2),
     inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.65);
-  transform: translateY(-2px);
 }
 
 /* ==========================================================================
@@ -205,18 +269,18 @@ body::before {
 
 .app-dock-header {
   position: fixed;
-  top: 16px;
+  top: 14px;
   left: 0;
   right: 0;
   z-index: 100;
-  padding: 0 20px;
+  padding: 0 16px;
   pointer-events: none;
 }
 
 .dock-inner {
   max-width: 1280px;
   margin: 0 auto;
-  height: 64px;
+  height: 60px;
   background: 
     linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 100%),
     radial-gradient(circle at 15% 50%, rgba(125, 211, 252, 0.15) 0%, transparent 60%);
@@ -242,11 +306,12 @@ body::before {
   gap: 10px;
   text-decoration: none;
   cursor: pointer;
+  user-select: none;
 }
 
 .dock-brand-icon {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-full);
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.08) 100%);
   border: 1px solid rgba(255, 255, 255, 0.35);
@@ -255,21 +320,22 @@ body::before {
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
+  shrink: 0;
 }
 
 .dock-brand-title {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
 .dock-brand-badge {
-  font-size: 11px;
+  font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -321,7 +387,7 @@ body::before {
 .dock-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .dock-status-pill {
@@ -344,6 +410,7 @@ body::before {
   background: var(--emerald-accent);
   box-shadow: 0 0 10px var(--emerald-accent);
   animation: pulse-dot 2s infinite ease-in-out;
+  shrink: 0;
 }
 
 @keyframes pulse-dot {
@@ -360,13 +427,13 @@ body::before {
   z-index: 10;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 104px 20px 80px;
+  padding: 96px 16px 80px;
   min-height: 100vh;
 }
 
 .tab-view {
   display: none;
-  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .tab-view.active {
@@ -374,7 +441,7 @@ body::before {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -383,7 +450,7 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .meta-status-line {
@@ -398,7 +465,7 @@ body::before {
 }
 
 .section-title {
-  font-size: 36px;
+  font-size: 34px;
   font-weight: 300;
   color: var(--text-primary);
   letter-spacing: -0.03em;
@@ -406,7 +473,7 @@ body::before {
 }
 
 .section-subtitle {
-  font-size: 15px;
+  font-size: 14.5px;
   color: var(--text-muted);
   max-width: 650px;
   line-height: 1.6;
@@ -421,22 +488,23 @@ body::before {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 28px;
+  gap: 14px;
+  margin-bottom: 24px;
 }
 
 .hub-action-cluster {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 /* Featured Active Trip Glass Hero */
 .featured-trip-hero {
   display: grid;
   grid-template-columns: 1fr;
-  min-height: 480px;
-  margin-bottom: 40px;
+  min-height: 440px;
+  margin-bottom: 36px;
   position: relative;
 }
 
@@ -447,11 +515,11 @@ body::before {
 }
 
 .featured-trip-content {
-  padding: 36px;
+  padding: 32px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 24px;
+  gap: 20px;
   position: relative;
   z-index: 2;
 }
@@ -460,13 +528,13 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 16px;
+  padding-bottom: 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .route-code-chip {
   font-family: monospace;
-  font-size: 12px;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   color: var(--water-accent);
   background: rgba(125, 211, 252, 0.1);
@@ -476,25 +544,25 @@ body::before {
 }
 
 .featured-trip-title {
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 500;
   color: var(--text-primary);
   letter-spacing: -0.02em;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .featured-trip-desc {
-  font-size: 15px;
+  font-size: 14.5px;
   color: var(--text-secondary);
   line-height: 1.6;
 }
 
-/* Spatial Metrics 3-Grid */
+/* Spatial Metrics Grid */
 .spatial-metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-  margin: 16px 0;
+  margin: 14px 0;
 }
 
 .metric-liquid-tile {
@@ -503,7 +571,7 @@ body::before {
   border-top: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 14px;
 }
 
 .metric-label {
@@ -516,14 +584,17 @@ body::before {
 }
 
 .metric-value {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--text-primary);
   display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .metric-sub {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--water-accent);
   margin-top: 2px;
 }
@@ -549,8 +620,8 @@ body::before {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-md);
-  margin: 16px;
-  min-height: 280px;
+  margin: 14px;
+  min-height: 260px;
   background-size: cover;
   background-position: center;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -565,10 +636,10 @@ body::before {
 
 .visual-floating-badge {
   position: absolute;
-  bottom: 16px;
-  left: 16px;
+  bottom: 14px;
+  left: 14px;
   z-index: 2;
-  padding: 8px 16px;
+  padding: 6px 14px;
   border-radius: var(--radius-full);
   background: rgba(6, 9, 14, 0.85);
   backdrop-filter: blur(16px);
@@ -577,23 +648,23 @@ body::before {
   align-items: center;
   gap: 8px;
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
 }
 
 /* Trips Hub Grid */
 .trips-directory-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
 }
 
 .trip-card-item {
-  padding: 24px;
+  padding: 22px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 16px;
+  gap: 14px;
   cursor: pointer;
   border-radius: var(--radius-lg);
 }
@@ -610,8 +681,8 @@ body::before {
 .ai-planner-header {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 20px;
 }
 
 @media (min-width: 768px) {
@@ -657,11 +728,11 @@ body::before {
     inset 0 1px 1px rgba(255, 255, 255, 0.5);
 }
 
-/* AI Planner Asymmetric 2-Column Canvas */
+/* AI Planner Asymmetric Grid */
 .ai-planner-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: 20px;
   align-items: start;
 }
 
@@ -676,9 +747,9 @@ body::before {
   padding: 8px 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   border-radius: var(--radius-md);
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .omnibar-input {
@@ -687,9 +758,9 @@ body::before {
   border: none;
   outline: none;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: 14.5px;
   font-family: inherit;
-  padding: 10px 4px;
+  padding: 8px 4px;
 }
 
 .omnibar-input::placeholder {
@@ -700,20 +771,20 @@ body::before {
 .ai-chips-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .ai-chip-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11.5px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -722,7 +793,6 @@ body::before {
   background: rgba(255, 255, 255, 0.12);
   color: var(--text-primary);
   border-color: rgba(255, 255, 255, 0.28);
-  transform: translateY(-1px);
 }
 
 /* AI Recommendation Floating Result Card */
@@ -735,7 +805,7 @@ body::before {
 }
 
 .ai-rec-media {
-  height: 220px;
+  height: 200px;
   position: relative;
   background-size: cover;
   background-position: center;
@@ -749,10 +819,10 @@ body::before {
 }
 
 .ai-rec-body {
-  padding: 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 /* ==========================================================================
@@ -761,11 +831,11 @@ body::before {
 
 /* Top Metadata Deck & Weather */
 .itinerary-meta-deck {
-  padding: 24px 28px;
-  margin-bottom: 24px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 @media (min-width: 992px) {
@@ -779,14 +849,14 @@ body::before {
 .weather-spatial-pill {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 18px;
+  gap: 8px;
+  padding: 8px 16px;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
   color: var(--text-primary);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -795,22 +865,23 @@ body::before {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px;
+  padding: 5px;
   border-radius: var(--radius-full);
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.12);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   max-width: 100%;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .day-tab-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 18px;
+  padding: 7px 16px;
   border-radius: var(--radius-full);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--text-secondary);
   background: transparent;
@@ -834,11 +905,46 @@ body::before {
     inset 0 1px 1px rgba(255, 255, 255, 0.6);
 }
 
+/* Mobile Subtab View Switcher (Timeline, Map, Packing, Budget) */
+.itinerary-mobile-view-tabs {
+  display: none;
+  gap: 6px;
+  padding: 4px;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  margin-bottom: 16px;
+}
+
+.itinerary-subtab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.itinerary-subtab-btn.active {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
 /* Master Itinerary Workspace Grid */
 .itinerary-workspace-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 28px;
+  gap: 24px;
   align-items: start;
 }
 
@@ -851,10 +957,9 @@ body::before {
 /* Timeline Flow & Step Nodes */
 .timeline-flow-container {
   position: relative;
-  padding-left: 36px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .timeline-step-line {
@@ -867,15 +972,20 @@ body::before {
   opacity: 0.4;
 }
 
+.timeline-item-wrapper {
+  position: relative;
+  padding-left: 42px;
+}
+
 .timeline-step-node {
   position: absolute;
-  left: -36px;
+  left: 0;
   top: 18px;
   width: 32px;
   height: 32px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 0 16px rgba(125, 211, 252, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.6);
   display: flex;
   align-items: center;
@@ -888,10 +998,10 @@ body::before {
 
 /* Itinerary Item Card */
 .itinerary-item-card {
-  padding: 22px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   border-radius: var(--radius-lg);
   position: relative;
 }
@@ -959,17 +1069,40 @@ body::before {
   position: relative;
   border: 1px solid var(--border-medium);
   box-shadow: var(--shadow-liquid-deep);
+  background: #060c18;
 }
 
 #map-container {
   width: 100%;
   height: 100%;
-  background: #0b0f19;
+  background: #060c18;
 }
 
-/* Leaflet Dark Customization */
 .leaflet-container {
-  background: #0b0f19 !important;
+  background: #060c18 !important;
+}
+
+/* Beautiful Obsidian Dark Filter for Free OpenStreetMap Tiles */
+.map-spatial-chamber .leaflet-tile {
+  filter: brightness(0.62) invert(1) contrast(3) hue-rotate(200deg) saturate(0.35) brightness(0.72) !important;
+}
+
+.leaflet-control-zoom {
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: var(--radius-sm) !important;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(10, 16, 28, 0.85) !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
 }
 
 .custom-spatial-marker {
@@ -978,7 +1111,7 @@ body::before {
   border-radius: var(--radius-full);
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 100%);
   border: 1.5px solid #ffffff;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), 0 0 12px rgba(125, 211, 252, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), 0 0 14px rgba(125, 211, 252, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -987,15 +1120,83 @@ body::before {
   color: #ffffff;
 }
 
+/* User's Liquid Glass Containers and Refractive Buttons */
+.glassContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+.glassContainer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7), inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
+}
+
+.glassContainer::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(0px);
+  filter: url(#container-glass);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.glassBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 9999px;
+  background: transparent;
+  outline: none;
+  border: none;
+  z-index: 0;
+  transition: transform 0.2s ease;
+}
+
+.glassBtn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7), inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.glassBtn::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(0px);
+  filter: url(#btn-glass);
+  overflow: hidden;
+  isolation: isolate;
+}
+
 /* ==========================================================================
    PACKING CHECKLIST & BUDGET WIDGETS
    ========================================================================== */
 
 .packing-checklist-widget {
-  padding: 24px;
+  padding: 22px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   border-radius: var(--radius-lg);
 }
 
@@ -1017,8 +1218,8 @@ body::before {
 
 .pack-checkbox {
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 6px;
   border: 1.5px solid rgba(255, 255, 255, 0.35);
   background: rgba(0, 0, 0, 0.3);
@@ -1027,6 +1228,7 @@ body::before {
   align-items: center;
   justify-content: center;
   position: relative;
+  shrink: 0;
 }
 
 .pack-checkbox:checked {
@@ -1037,7 +1239,7 @@ body::before {
 .pack-checkbox:checked::after {
   content: '✓';
   color: #06090e;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -1048,7 +1250,7 @@ body::before {
 .settings-spatial-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: 20px;
 }
 
 @media (min-width: 992px) {
@@ -1058,17 +1260,17 @@ body::before {
 }
 
 .settings-card-slab {
-  padding: 28px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
   border-radius: var(--radius-lg);
 }
 
 .form-group-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .form-label-title {
@@ -1080,7 +1282,7 @@ body::before {
 }
 
 .form-field-desc {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-muted);
 }
 
@@ -1092,7 +1294,7 @@ body::before {
   border-top: 1px solid rgba(0, 0, 0, 0.6);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45);
   border-radius: var(--radius-sm);
-  padding: 12px 16px;
+  padding: 12px 14px;
   color: var(--text-primary);
   font-size: 14px;
   font-family: inherit;
@@ -1117,8 +1319,8 @@ body::before {
 
 .liquid-range-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: var(--radius-full);
   background: #ffffff;
   border: 2px solid rgba(255, 255, 255, 0.6);
@@ -1127,16 +1329,16 @@ body::before {
 }
 
 /* ==========================================================================
-   BUTTONS & INTERACTIVE ELEMENTS
+   BUTTONS & TOUCH TARGETS
    ========================================================================== */
 
-/* Primary Action: Polished Frosted Glass Prism */
 .btn-liquid-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px 24px;
+  padding: 12px 22px;
+  min-height: 44px;
   border-radius: var(--radius-sm);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.1) 100%);
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -1145,11 +1347,12 @@ body::before {
     0 12px 28px -6px rgba(0, 0, 0, 0.6),
     inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.65);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
 }
 
 .btn-liquid-primary:hover {
@@ -1162,24 +1365,25 @@ body::before {
   transform: translateY(-2px);
 }
 
-/* Subtle Secondary Glass Button */
 .btn-liquid-subtle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 10px 18px;
+  min-height: 44px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-top: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
   color: var(--text-secondary);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
+  user-select: none;
 }
 
 .btn-liquid-subtle:hover {
@@ -1188,10 +1392,9 @@ body::before {
   border-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Icon Discs (e.g., sync, close, delete) */
 .btn-icon-disc {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-full);
   display: inline-flex;
   align-items: center;
@@ -1201,6 +1404,7 @@ body::before {
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
+  shrink: 0;
 }
 
 .btn-icon-disc:hover {
@@ -1216,14 +1420,14 @@ body::before {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(3, 5, 8, 0.75);
+  background: rgba(3, 5, 8, 0.78);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 1000;
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
   opacity: 0;
   transition: opacity 0.25s ease;
 }
@@ -1235,16 +1439,25 @@ body::before {
 
 .modal-sheet {
   width: 100%;
-  max-width: 580px;
+  max-width: 560px;
   max-height: 90vh;
   overflow-y: auto;
   border-radius: var(--radius-xl);
-  padding: 32px;
+  padding: 28px 24px;
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.modal-drag-handle {
+  display: none;
+  width: 36px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.3);
+  margin: 0 auto 16px;
+}
+
 @keyframes slideUp {
-  from { transform: translateY(24px) scale(0.97); opacity: 0; }
+  from { transform: translateY(20px) scale(0.97); opacity: 0; }
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
@@ -1252,11 +1465,11 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .modal-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -1268,59 +1481,52 @@ body::before {
 .mobile-bottom-dock {
   display: none;
   position: fixed;
-  bottom: 16px;
-  left: 20px;
-  right: 20px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: 14px;
+  right: 14px;
   z-index: 99;
-  height: 60px;
+  height: 62px;
   border-radius: var(--radius-full);
   background: 
-    linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%),
     radial-gradient(circle at 50% 0%, rgba(125, 211, 252, 0.15) 0%, transparent 70%);
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  backdrop-filter: blur(36px) saturate(200%);
+  -webkit-backdrop-filter: blur(36px) saturate(200%);
   border: 1px solid var(--border-medium);
   border-top: 1.5px solid var(--border-rim-zenith);
   box-shadow: 
     0 16px 40px -8px rgba(0, 8, 24, 0.9),
     inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.6);
-  padding: 6px;
+  padding: 4px 6px;
   justify-content: space-around;
   align-items: center;
 }
 
-@media (max-width: 860px) {
-  .app-dock-header .dock-nav {
-    display: none;
-  }
-  .mobile-bottom-dock {
-    display: flex;
-  }
-  .app-main {
-    padding-bottom: 100px;
-  }
-}
-
 .mobile-dock-btn {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
+  height: 50px;
   color: var(--text-secondary);
   background: transparent;
   border: none;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  padding: 6px 12px;
+  padding: 4px;
   border-radius: var(--radius-full);
   transition: all 0.2s ease;
+  user-select: none;
 }
 
 .mobile-dock-btn.active {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 0 12px rgba(125, 211, 252, 0.15);
 }
 
 /* ==========================================================================
@@ -1337,21 +1543,23 @@ body::before {
   flex-direction: column;
   gap: 8px;
   pointer-events: none;
+  width: 90%;
+  max-width: 400px;
 }
 
 .toast-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 20px;
+  padding: 12px 18px;
   border-radius: var(--radius-full);
-  background: rgba(6, 12, 22, 0.92);
+  background: rgba(6, 12, 22, 0.94);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-top: 1.2px solid rgba(255, 255, 255, 0.55);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
   color: #ffffff;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   pointer-events: auto;
   animation: toastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -1360,4 +1568,225 @@ body::before {
 @keyframes toastIn {
   from { opacity: 0; transform: translateY(12px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ==========================================================================
+   DEEP MOBILE OPTIMIZATION (< 860px and < 600px)
+   ========================================================================== */
+
+@media (max-width: 860px) {
+  .app-dock-header {
+    top: max(8px, env(safe-area-inset-top));
+    padding: 0 12px;
+  }
+  
+  .dock-inner {
+    height: 52px;
+    padding: 0 12px;
+  }
+
+  .dock-brand-title {
+    font-size: 14.5px;
+  }
+
+  .dock-brand-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .dock-status-pill {
+    display: none !important;
+  }
+
+  .app-dock-header .dock-nav {
+    display: none;
+  }
+
+  .mobile-bottom-dock {
+    display: flex;
+  }
+
+  .app-main {
+    padding-top: calc(52px + max(14px, env(safe-area-inset-top)));
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: calc(76px + max(16px, env(safe-area-inset-bottom)));
+  }
+
+  .itinerary-mobile-view-tabs {
+    display: flex;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Prevent iOS Safari input auto-zoom */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  .section-title {
+    font-size: 26px;
+  }
+
+  .section-subtitle {
+    font-size: 13.5px;
+  }
+
+  /* Hub Action Bar Stacking */
+  .hub-actions-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .hub-action-cluster {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .hub-action-cluster .btn-liquid-primary,
+  .hub-action-cluster .btn-liquid-subtle {
+    flex: 1;
+    min-height: 44px;
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+
+  /* Featured Trip Card on Phone */
+  .featured-trip-content {
+    padding: 20px 16px;
+    gap: 14px;
+  }
+
+  .featured-trip-title {
+    font-size: 22px;
+  }
+
+  .spatial-metrics-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .spatial-metrics-grid .metric-liquid-tile:last-child {
+    grid-column: span 2;
+  }
+
+  .metric-liquid-tile {
+    padding: 12px;
+  }
+
+  .metric-value {
+    font-size: 15px;
+  }
+
+  .featured-trip-visual {
+    min-height: 190px;
+    max-height: 210px;
+    margin: 10px;
+  }
+
+  /* Trips Directory Grid */
+  .trips-directory-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* AI Planner Omnibar on Phone */
+  .ai-omnibar-slab {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .ai-omnibar-slab .btn-liquid-primary {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .ai-chips-wrap {
+    gap: 6px;
+  }
+
+  .ai-chip-btn {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .ai-rec-media {
+    height: 170px;
+  }
+
+  .ai-rec-body {
+    padding: 16px;
+    gap: 10px;
+  }
+
+  .btn-commit-ai-item {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  /* Itinerary Meta Deck */
+  .itinerary-meta-deck {
+    padding: 16px 14px;
+    gap: 12px;
+  }
+
+  #itinerary-trip-title {
+    font-size: 22px;
+  }
+
+  /* Timeline Item Cards on Phone */
+  .timeline-item-wrapper {
+    padding-left: 36px;
+  }
+
+  .timeline-step-node {
+    width: 28px;
+    height: 28px;
+    font-size: 10px;
+    top: 14px;
+  }
+
+  .itinerary-item-card {
+    padding: 16px 14px;
+    gap: 8px;
+  }
+
+  .item-title {
+    font-size: 16px;
+  }
+
+  .item-meta-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  /* Modals as True Bottom Sheets on Phone */
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-sheet {
+    max-width: 100%;
+    border-radius: 28px 28px 0 0;
+    padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+    max-height: 88vh;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.8);
+  }
+
+  .modal-drag-handle {
+    display: block;
+  }
+
+  .modal-sheet form [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
 }
