@@ -23,7 +23,6 @@ let wishlistItems = [
 // Document Ready Initialization
 window.addEventListener('DOMContentLoaded', async () => {
   initLiquidGlassShader();
-  initInteractiveGlassLighting();
   setupNavigation();
   setupModals();
   setupForms();
@@ -1695,25 +1694,4 @@ function initLiquidGlassShader() {
 
   window.addEventListener('resize', setCanvasSize);
   render();
-}
-
-// ----------------- INTERACTIVE SPECULAR LIGHTING TRACKER -----------------
-function initInteractiveGlassLighting() {
-  window.addEventListener('mousemove', (e) => {
-    const cards = document.querySelectorAll('.liquid-glass, .btn-liquid-primary, .btn-liquid-subtle');
-    cards.forEach(card => {
-      const rect = card.getBoundingClientRect();
-      if (
-        e.clientX >= rect.left - 80 &&
-        e.clientX <= rect.right + 80 &&
-        e.clientY >= rect.top - 80 &&
-        e.clientY <= rect.bottom + 80
-      ) {
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        card.style.setProperty('--mouse-x', `${x}px`);
-        card.style.setProperty('--mouse-y', `${y}px`);
-      }
-    });
-  }, { passive: true });
 }

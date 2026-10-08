@@ -1023,23 +1023,9 @@ Day 3: Arashiyama Bamboo Grove at 08:30 AM, Monkey Park, and Tenryu-ji Temple." 
           vec4 s4 = texture2D(iChannel0, uvG - vec2(0.0, blurOffset.y));
           glassCol = (glassCol * 2.0 + s1 + s2 + s3 + s4) / 6.0;
 
-          // Caustic internal rim highlight
-          float causticRim = exp(-pow((minDist + 2.5) / 2.0, 2.0));
-          // Top zenith razor highlight
-          float zenithRim = exp(-pow((minDist + 2.0) / 1.6, 2.0)) * clamp(-norm.y, 0.0, 1.0);
-
-          // Interactive cursor specular glint across the glass slab
-          float mouseDist = length(fragCoord.xy - iMouse.xy);
-          float cursorGlint = exp(-pow(mouseDist / 130.0, 2.0)) * 0.38;
-          float cursorCaustic = exp(-pow((minDist + 2.5) / 2.0, 2.0)) * cursorGlint * 2.2;
-
-          // Oceanic fluid luminescence
-          glassCol.rgb *= 1.05;
-          glassCol.rgb += vec3(0.015, 0.035, 0.06);
-
-          // Combine caustics and highlights
-          glassCol.rgb += vec3(0.65, 0.85, 1.0) * (causticRim * 0.35 + cursorCaustic) +
-                          vec3(0.95, 0.98, 1.0) * (zenithRim * 0.58 + cursorGlint * 0.15);
+          // Natural pure oceanic fluid clarity
+          glassCol.rgb *= 1.02;
+          glassCol.rgb += vec3(0.01, 0.02, 0.04);
 
           // Anti-aliased border blend
           float alpha = smoothstep(1.5, -1.2, minDist);
