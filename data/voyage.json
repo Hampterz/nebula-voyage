@@ -2,7 +2,7 @@
   "settings": {
     "aiProvider": "gemini",
     "geminiApiKey": "",
-    "geminiModel": "gemini-3.8-flash",
+    "geminiModel": "gemini-2.5-flash",
     "ollamaUrl": "http://umbrel.local:11434",
     "ollamaModel": "llama3:latest",
     "enableWebSearch": true

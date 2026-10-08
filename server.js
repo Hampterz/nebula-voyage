@@ -36,7 +36,7 @@ function loadDb() {
     settings: {
       aiProvider: 'gemini', // 'gemini' | 'ollama'
       geminiApiKey: '',
-      geminiModel: 'gemini-3.8-flash',
+      geminiModel: 'gemini-2.5-flash',
       ollamaUrl: 'http://umbrel.local:11434',
       ollamaModel: 'llama3:latest',
       enableWebSearch: true
@@ -199,10 +199,10 @@ async function callAiService({ prompt, systemPrompt, settings }) {
     if (!apiKey) {
       throw new Error('Gemini API key is required. Please set it in Settings.');
     }
-    const model = settings.geminiModel || 'gemini-3.8-flash';
+    const model = settings.geminiModel || 'gemini-2.5-flash';
     
     // Attempt requested model, fallback if version name differs
-    const modelsToTry = [model, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    const modelsToTry = [model, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'].filter((v, i, a) => a.indexOf(v) === i);
     let lastError = null;
 
     for (const m of modelsToTry) {
@@ -222,7 +222,7 @@ async function callAiService({ prompt, systemPrompt, settings }) {
             ],
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: 2048
+              maxOutputTokens: 8192
             }
           })
         });
@@ -637,27 +637,27 @@ Provide 12-18 essential and destination-specific packing items.`;
 });
 
 function parseRawPlanHeuristically(rawPlan) {
-  const lines = rawPlan.split('\n').map(l => l.trim()).filter(Boolean);
+  const rawLines = rawPlan.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   let destination = 'Kyoto, Japan';
-  let title = 'Imported Expedition';
+  let title = 'Converted Expedition';
   let currentDay = 1;
   const items = [];
   const packingList = [];
   const expenses = [];
 
-  for (const line of lines) {
+  for (const line of rawLines) {
     if (/(?:trip to|travel to|visiting|destination:?)\s*([A-Za-z\s,]+)/i.test(line)) {
       const match = line.match(/(?:trip to|travel to|visiting|destination:?)\s*([A-Za-z\s,]+)/i);
       if (match && match[1]) {
         destination = match[1].trim();
-        title = `Trip to ${destination}`;
+        title = `Expedition to ${destination}`;
         break;
       }
     }
   }
 
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
+  for (let i = 0; i < rawLines.length; i++) {
+    let line = rawLines[i];
 
     // Day headers (e.g. Day 1, Day 02, Day 3: Arashiyama)
     const dayMatch = line.match(/^(?:day|dia)\s*(\d+)[:\s-]*(.*)$/i) || line.match(/^(?:day\s*[a-z]+|\d+(?:st|nd|rd|th)\s*day)[:\s-]*(.*)$/i);
@@ -668,58 +668,51 @@ function parseRawPlanHeuristically(rawPlan) {
         currentDay++;
       }
       const restOfLine = (dayMatch[2] || '').trim();
-      if (!restOfLine) {
-        continue;
-      }
+      if (!restOfLine) continue;
       line = restOfLine;
     }
 
-    // Split sentences / activities if multiple listed in one line
-    const segments = line.split(/(?<=[.!?])\s+|;\s+/).map(s => s.trim()).filter(s => s.length > 3);
-    const subLines = segments.length > 1 ? segments : [line];
+    // Keep the entire entry together without slicing by periods
+    let time = '10:00';
+    let timeBlock = 'morning';
+    const timeMatch = line.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
+    if (timeMatch) {
+      time = timeMatch[1].trim();
+    }
 
-    for (const subLine of subLines) {
-      let time = '10:00';
-      let timeBlock = 'morning';
-      const timeMatch = subLine.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
-      if (timeMatch) {
-        time = timeMatch[1].trim();
-      }
+    let category = 'activity';
+    const lower = line.toLowerCase();
+    if (lower.includes('flight') || lower.includes('terminal') || lower.includes('airport') || lower.includes('landing') || lower.includes('kix') || lower.includes('nrt') || lower.includes('hnd')) {
+      category = 'flight';
+      timeBlock = 'morning';
+    } else if (lower.includes('hotel') || lower.includes('check in') || lower.includes('check-in') || lower.includes('ryokan') || lower.includes('airbnb') || lower.includes('resort')) {
+      category = 'hotel';
+      timeBlock = 'afternoon';
+    } else if (lower.includes('lunch') || lower.includes('dinner') || lower.includes('breakfast') || lower.includes('cafe') || lower.includes('restaurant') || lower.includes('ramen') || lower.includes('bar ') || lower.includes('food') || lower.includes('sushi') || lower.includes('dining')) {
+      category = 'food';
+      if (lower.includes('dinner') || lower.includes('bar')) timeBlock = 'evening';
+      else if (lower.includes('lunch')) timeBlock = 'afternoon';
+      else timeBlock = 'morning';
+    } else if (lower.includes('train') || lower.includes('bus') || lower.includes('shinkansen') || lower.includes('metro') || lower.includes('transit') || lower.includes('taxi')) {
+      category = 'transit';
+    }
 
-      let category = 'activity';
-      const lower = subLine.toLowerCase();
-      if (lower.includes('flight') || lower.includes('terminal') || lower.includes('airport') || lower.includes('landing') || lower.includes('kix') || lower.includes('nrt') || lower.includes('hnd')) {
-        category = 'flight';
-        timeBlock = 'morning';
-      } else if (lower.includes('hotel') || lower.includes('check in') || lower.includes('check-in') || lower.includes('ryokan') || lower.includes('airbnb') || lower.includes('resort')) {
-        category = 'hotel';
-        timeBlock = 'afternoon';
-      } else if (lower.includes('lunch') || lower.includes('dinner') || lower.includes('breakfast') || lower.includes('cafe') || lower.includes('restaurant') || lower.includes('ramen') || lower.includes('bar ') || lower.includes('food') || lower.includes('sushi') || lower.includes('dining')) {
-        category = 'food';
-        if (lower.includes('dinner') || lower.includes('bar')) timeBlock = 'evening';
-        else if (lower.includes('lunch')) timeBlock = 'afternoon';
-        else timeBlock = 'morning';
-      } else if (lower.includes('train') || lower.includes('bus') || lower.includes('shinkansen') || lower.includes('metro') || lower.includes('transit') || lower.includes('taxi')) {
-        category = 'transit';
-      }
+    let itemTitle = line
+      .replace(/^[-*•\d.)\]\s]+/, '')
+      .replace(/^\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*[-–:]?\s*/i, '')
+      .trim();
 
-      let itemTitle = subLine
-        .replace(/^[-*•\d.)\]\s]+/, '')
-        .replace(/^\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*[-–:]?\s*/i, '')
-        .trim();
-
-      if (itemTitle.length > 2 && !itemTitle.toLowerCase().startsWith('day ')) {
-        items.push({
-          day: currentDay,
-          timeBlock,
-          time,
-          category,
-          title: itemTitle.slice(0, 80),
-          location: itemTitle.split(' - ')[0].replace(/^(?:visit|explore|see|go to)\s+/i, '').trim() || destination,
-          cost: 0,
-          notes: subLine
-        });
-      }
+    if (itemTitle.length > 2 && !itemTitle.toLowerCase().startsWith('day ')) {
+      items.push({
+        day: currentDay,
+        timeBlock,
+        time,
+        category,
+        title: itemTitle.slice(0, 80),
+        location: itemTitle.split(' - ')[0].replace(/^(?:visit|explore|see|go to)\s+/i, '').trim() || destination,
+        cost: 0,
+        notes: line
+      });
     }
   }
 
@@ -752,89 +745,135 @@ function parseRawPlanHeuristically(rawPlan) {
   };
 }
 
-// ----------------- AI / HEURISTIC IMPORT: PARSE & IMPORT EXISTING PLAN -----------------
+// ----------------- AI / HEURISTIC IMPORT: PARSE & CONVERT EXISTING PLAN VIA GEMINI -----------------
 app.post(['/api/import-plan', '/api/trips/import-plan'], async (req, res) => {
   try {
-    const { rawPlan } = req.body;
+    const { rawPlan, geminiApiKey } = req.body;
     const targetTripId = req.body.targetTripId || req.body.tripId;
     const importMode = req.body.importMode || (targetTripId ? 'current' : 'new');
 
     if (!rawPlan || !rawPlan.trim()) {
-      return res.status(400).json({ error: 'Please paste your existing plan text' });
+      return res.status(400).json({ error: 'Please paste your existing plan text to convert.' });
+    }
+
+    // Persist API key if user passed it in modal
+    if (geminiApiKey && typeof geminiApiKey === 'string' && geminiApiKey.trim()) {
+      db.settings.geminiApiKey = geminiApiKey.trim();
+      db.settings.aiProvider = 'gemini';
+      saveDb(db);
+    }
+
+    const apiKey = (geminiApiKey && geminiApiKey.trim()) || db.settings.geminiApiKey || process.env.GEMINI_API_KEY;
+    const provider = db.settings.aiProvider || 'gemini';
+
+    if (!apiKey && provider !== 'ollama') {
+      return res.status(400).json({
+        error: 'Google Gemini API key required to convert plans with AI. Please enter your Gemini API key in the field or in System Settings.',
+        needsApiKey: true
+      });
     }
 
     let parsed = null;
 
-    // Check if an AI provider has an API key configured (Gemini or OpenAI or Ollama)
-    const hasAiKey = Boolean(
-      db.settings.geminiApiKey || 
-      process.env.GEMINI_API_KEY || 
-      db.settings.aiProvider === 'ollama'
-    );
+    try {
+      const systemPrompt = `You are the Master Travel Architect for Nebula Voyage, a spatial trip planning suite on Umbrel.
+Your job is to read raw, unstructured, pasted travel plans (which may be messy emails, bullet notes, flight tickets, Airbnb bookings, Word docs, or blog excerpts) and intelligently synthesize them into a clean, complete, structured travel itinerary for our application.
 
-    if (hasAiKey) {
-      try {
-        const systemPrompt = `You are Voyage Itinerary Parser AI.
-Your job is to read unstructured or formatted trip plans, emails, notes, bullet points, or bookings, and extract a complete, organized travel itinerary.
-Return ONLY valid JSON matching this exact schema with NO markdown fences, no conversational text:
+CRITICAL ARCHITECTURAL RULES FOR NEBULA VOYAGE:
+1. NEVER SPLIT INDIVIDUAL SENTENCES OR CLAUSES INTO SEPARATE STOPS. A single sentence or fragment is NOT a stop.
+2. SYNTHESIZE REAL, COHESIVE WAYPOINTS:
+   - Read the whole text, understand the narrative flow, and extract real, actionable travel milestones.
+   - Group stops chronologically by Day (Day 1, Day 2, Day 3...).
+   - Each stop must represent an actual milestone:
+     * A flight arrival or departure (category: "flight")
+     * Checking into or out of lodging (category: "hotel")
+     * A meal, cafe, or dining experience (category: "food")
+     * Visiting a landmark, shrine, museum, or tour (category: "activity")
+     * Taking a train, bullet train, ferry, or transfer (category: "transit")
+3. STOP FIELDS:
+   - "day": Integer (1, 2, 3...)
+   - "timeBlock": Exactly one of "morning", "afternoon", "evening", "night"
+   - "time": A sensible 24-hr time string "HH:MM" (e.g. "09:30", "14:00", "19:30")
+   - "category": Exactly one of "flight", "hotel", "food", "activity", "transit", "note"
+   - "title": A clean, concise, proper title of the venue or milestone (e.g. "Arrive at Kansai International Airport (KIX)", "Check-in: Hotel Kanra Kyoto", "Fushimi Inari Shrine Hike", "Dinner at Pontocho Alley Kaiseki")
+   - "location": A clear, searchable address, landmark, or neighborhood name suitable for Google Maps and Leaflet map pins (e.g. "Fushimi Inari Taisha, Kyoto", "Hotel Kanra Kyoto, Shimogyo Ward")
+   - "cost": Estimated or mentioned numerical cost in the target currency (0 if included or unknown)
+   - "notes": Rich details, booking numbers, transit line instructions (e.g. "Take JR Haruka Express train directly to Kyoto Station, ~75 min"), or opening hours.
+4. TRIP METADATA:
+   - Identify the primary destination ("City, Country" or region).
+   - Create a clean, elegant trip title.
+   - Start and end dates if mentioned (YYYY-MM-DD) or empty string.
+   - Travelers count and travel style.
+   - Estimated target budget and currency.
+5. PACKING LIST & EXPENSES:
+   - Generate a relevant packing list tailored to the destination and activities (categories: "Clothing", "Documents", "Electronics", "Toiletries", "Gear").
+   - Categorize estimated expenses (categories: "Flights", "Hotels", "Food", "Activities", "Transit").
+
+OUTPUT FORMAT:
+Return ONLY valid, parseable JSON matching the exact schema below with NO markdown backticks, NO code fences, and NO conversational text:
 {
-  "destination": "City, Country or Region",
-  "title": "Descriptive catchy Trip Title",
-  "startDate": "YYYY-MM-DD" or "",
-  "endDate": "YYYY-MM-DD" or "",
-  "travelers": "e.g. 2 Adults or Solo Traveler",
-  "travelStyle": "e.g. Cultural & Foodie, Backpacking, Luxury, Family",
-  "targetBudget": number,
-  "currency": "USD" | "EUR" | "GBP" | "JPY",
-  "notes": "Key notes or general tips",
+  "destination": "City, Country",
+  "title": "Title of Trip",
+  "startDate": "YYYY-MM-DD",
+  "endDate": "YYYY-MM-DD",
+  "travelers": "2 Adults",
+  "travelStyle": "Cultural & Foodie",
+  "targetBudget": 2500,
+  "currency": "USD",
+  "notes": "Trip notes summary",
   "items": [
     {
-      "day": number (1, 2, 3...),
-      "timeBlock": "morning" | "afternoon" | "evening" | "night",
-      "time": "HH:MM",
-      "category": "flight" | "hotel" | "food" | "activity" | "transit",
-      "title": "Concise name of place or activity",
-      "location": "Address or landmark name",
-      "cost": number,
+      "day": 1,
+      "timeBlock": "morning",
+      "time": "09:30",
+      "category": "flight",
+      "title": "Arrive at Kansai International Airport (KIX)",
+      "location": "Kansai International Airport, Osaka",
+      "cost": 0,
       "websiteUrl": "",
-      "notes": "Booking confirmation, instructions or details"
+      "notes": "Board Haruka Express direct to Kyoto Station."
     }
   ],
   "packingList": [
-    { "category": "Clothing" | "Documents" | "Electronics", "text": "Item text" }
+    { "category": "Clothing", "text": "Walking shoes" }
   ],
   "expenses": [
-    { "title": "Expense description", "category": "Flights" | "Hotels" | "Food", "amount": number }
+    { "title": "Flight Tickets", "category": "Flights", "amount": 950 }
   ]
 }`;
 
-        const prompt = `Parse and convert the following existing travel plan text into the structured JSON schema:
+      const prompt = `Convert this existing travel plan into a clean, complete Nebula Voyage itinerary using the provided instructions:
 
-=== RAW PLAN TEXT ===
-${rawPlan}
-=== END RAW PLAN TEXT ===
+=== USER'S RAW PLAN ===
+${rawPlan.trim()}
+=== END USER'S RAW PLAN ===
 
-Extract all days, scheduled events, flights, hotels, food spots, and notes accurately. Organize sequential Days starting at Day 1.`;
+Generate a complete, beautiful, structured travel plan following all architectural rules. Ensure all days, stops, locations, packing checklist items, and budget allocations are cleanly synthesized.`;
 
-        const aiOutput = await callAiService({
-          prompt,
-          systemPrompt,
-          settings: db.settings
-        });
+      const aiOutput = await callAiService({
+        prompt,
+        systemPrompt,
+        settings: { ...db.settings, geminiApiKey: apiKey }
+      });
 
-        let jsonStr = aiOutput.trim();
-        if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
-        if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
-        if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
-        jsonStr = jsonStr.trim();
-
-        parsed = JSON.parse(jsonStr);
-      } catch (aiErr) {
-        console.warn('AI Parsing failed, falling back to sovereign heuristic parser:', aiErr.message);
-        parsed = parseRawPlanHeuristically(rawPlan);
+      let jsonStr = aiOutput.trim();
+      const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1].trim();
+      } else {
+        const start = jsonStr.indexOf('{');
+        const end = jsonStr.lastIndexOf('}');
+        if (start !== -1 && end !== -1 && end > start) {
+          jsonStr = jsonStr.substring(start, end + 1);
+        }
       }
-    } else {
-      // 100% Free / Sovereign local parsing (no API key required)
+
+      parsed = JSON.parse(jsonStr);
+    } catch (aiErr) {
+      console.warn('AI Parsing failed, checking error:', aiErr.message);
+      if (apiKey) {
+        throw new Error(`Gemini AI conversion failed: ${aiErr.message}`);
+      }
       parsed = parseRawPlanHeuristically(rawPlan);
     }
 

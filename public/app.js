@@ -159,7 +159,7 @@ function setupModals() {
   ];
   importBtns.forEach(btn => {
     if (btn) {
-      btn.addEventListener('click', () => openModal(document.getElementById('modal-import-plan')));
+      btn.addEventListener('click', () => openImportPlanModal());
     }
   });
 
@@ -1258,20 +1258,24 @@ function setupForms() {
       e.preventDefault();
       const rawText = document.getElementById('textarea-import-raw').value.trim();
       const btnSubmit = document.getElementById('btn-submit-import');
+      const keyInput = document.getElementById('input-import-gemini-key');
+      const geminiApiKey = keyInput ? keyInput.value.trim() : '';
+
       if (!rawText) return;
 
       const modeRadio = document.querySelector('input[name="import-target-mode"]:checked');
       const importMode = modeRadio ? modeRadio.value : (currentTrip ? 'current' : 'new');
 
       btnSubmit.disabled = true;
-      btnSubmit.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Converting Plan...</span>`;
+      btnSubmit.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>Gemini Converting...</span>`;
 
       try {
         const payload = {
           rawPlan: rawText,
           importMode,
           targetTripId: (importMode === 'current' && currentTrip) ? currentTrip.id : null,
-          tripId: (importMode === 'current' && currentTrip) ? currentTrip.id : null
+          tripId: (importMode === 'current' && currentTrip) ? currentTrip.id : null,
+          geminiApiKey: geminiApiKey || undefined
         };
 
         const res = await fetch('/api/import-plan', {
@@ -1280,8 +1284,12 @@ function setupForms() {
           body: JSON.stringify(payload)
         });
 
-        if (res.ok) {
-          const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.success) {
+          if (geminiApiKey) {
+            await loadSettings();
+          }
           closeModal(document.getElementById('modal-import-plan'));
           formImport.reset();
 
@@ -1299,8 +1307,19 @@ function setupForms() {
             }, 300);
           }
         } else {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || 'Conversion failed');
+          if (data.needsApiKey) {
+            if (keyInput) {
+              keyInput.focus();
+              keyInput.style.borderColor = '#f59e0b';
+              keyInput.style.boxShadow = '0 0 0 2px rgba(245, 158, 11, 0.3)';
+              setTimeout(() => {
+                keyInput.style.borderColor = '';
+                keyInput.style.boxShadow = '';
+              }, 4000);
+            }
+            throw new Error(data.error || 'Gemini API key is required to convert plans with AI.');
+          }
+          throw new Error(data.error || 'Conversion failed. Please verify API settings.');
         }
       } catch (err) {
         console.error(err);
@@ -1311,6 +1330,44 @@ function setupForms() {
       }
     });
   }
+}
+
+function openImportPlanModal() {
+  const modal = document.getElementById('modal-import-plan');
+  if (!modal) return;
+
+  const keyInput = document.getElementById('input-import-gemini-key');
+  const statusEl = document.getElementById('import-gemini-key-status');
+
+  const hasKey = !!(appSettings && appSettings.hasGeminiKey);
+  if (statusEl) {
+    if (hasKey) {
+      statusEl.innerHTML = `<span style="color: #34d399; font-weight: 500; display: inline-flex; align-items: center; gap: 3px;"><span class="material-symbols-outlined text-[13px]">check_circle</span> Key Active</span>`;
+      statusEl.style.background = 'rgba(52, 211, 153, 0.12)';
+      statusEl.style.border = '1px solid rgba(52, 211, 153, 0.25)';
+      if (keyInput) {
+        keyInput.placeholder = '•••••••••••••••• (Saved in Settings — leave blank to keep)';
+      }
+    } else {
+      statusEl.innerHTML = `<span style="color: #fbbf24; font-weight: 500; display: inline-flex; align-items: center; gap: 3px;"><span class="material-symbols-outlined text-[13px]">key</span> Key Required</span>`;
+      statusEl.style.background = 'rgba(251, 191, 36, 0.12)';
+      statusEl.style.border = '1px solid rgba(251, 191, 36, 0.25)';
+      if (keyInput) {
+        keyInput.placeholder = 'Enter Gemini API Key (e.g. AIzaSy...)';
+      }
+    }
+  }
+
+  // Update target mode selection radio buttons based on whether active trip exists
+  const currentRadio = document.querySelector('input[name="import-target-mode"][value="current"]');
+  const newRadio = document.querySelector('input[name="import-target-mode"][value="new"]');
+  if (currentTrip && currentRadio) {
+    currentRadio.checked = true;
+  } else if (newRadio) {
+    newRadio.checked = true;
+  }
+
+  openModal(modal);
 }
 
 function openAddStopModal() {
