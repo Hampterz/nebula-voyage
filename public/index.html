@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voyage · Modern AI Trip Planner & Itinerary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Top Navigation Header -->
+  <header class="navbar">
+    <div class="nav-left">
+      <div class="brand-logo" id="btn-home">
+        <span class="brand-icon">🧭</span>
+        <span class="brand-name">Voyage</span>
+      </div>
+      <!-- Trip Selector Dropdown -->
+      <div class="trip-selector-container">
+        <select id="select-active-trip" class="trip-dropdown" aria-label="Select Active Trip">
+          <option value="">Loading trips...</option>
+        </select>
+        <button id="btn-new-trip" class="btn-subtle" title="Create a new trip">+ New Trip</button>
+      </div>
+    </div>
+
+    <!-- Mode Switcher: Planning vs Viewing -->
+    <div class="nav-center">
+      <div class="mode-pills" role="tablist">
+        <button id="tab-planning" class="mode-pill active" role="tab" aria-selected="true">
+          <span class="pill-icon">✨</span> Planning
+        </button>
+        <button id="tab-viewing" class="mode-pill" role="tab" aria-selected="false">
+          <span class="pill-icon">🗺️</span> Viewing
+        </button>
+      </div>
+    </div>
+
+    <div class="nav-right">
+      <button id="btn-share-trip" class="btn-secondary" title="Share trip or export itinerary">
+        <span>🔗</span> Share & Export
+      </button>
+      <button id="btn-open-settings" class="btn-icon" title="AI & App Settings">
+        <span>⚙️</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+
+    <!-- Hero / Trip Overview Header -->
+    <section class="trip-hero-card" id="trip-hero">
+      <div class="hero-details">
+        <div class="hero-top-meta">
+          <span class="badge-destination" id="hero-dest">📍 Destination</span>
+          <span class="badge-dates" id="hero-dates">📅 Dates</span>
+          <span class="badge-travelers" id="hero-travelers">👥 Travelers</span>
+          <span class="badge-style" id="hero-style">🏷️ Style</span>
+        </div>
+        <h1 class="hero-title" id="hero-title">Select or Create a Trip</h1>
+        <p class="hero-notes" id="hero-notes">Loading notes...</p>
+      </div>
+      <!-- Real-time Destination Weather Card -->
+      <div class="hero-weather-card" id="weather-card">
+        <div class="weather-loading" id="weather-status">Fetching forecast...</div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: PLANNING -->
+    <section id="section-planning" class="tab-view active">
+      <div class="planning-grid">
+        <!-- Left Column: AI Co-Pilot & Brainstorming -->
+        <div class="planning-ai-column">
+          <div class="card ai-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <span class="card-icon">⚡</span>
+                <div>
+                  <h2>AI Travel Planner</h2>
+                  <p class="card-subtitle" id="ai-active-provider-label">Using Google Gemini & Live Web Search</p>
+                </div>
+              </div>
+              <span class="badge-ai-pill" id="badge-ai-model">Gemini 3.8 Flash</span>
+            </div>
+
+            <!-- Quick Suggestion Prompts -->
+            <div class="ai-prompt-pills">
+              <button class="prompt-pill" data-prompt="Find top 5 must-visit landmarks and photo spots">📸 Must-See Sights</button>
+              <button class="prompt-pill" data-prompt="Best authentic food, local markets and cafes">🍜 Local Food & Dining</button>
+              <button class="prompt-pill" data-prompt="Unique hidden gems, peaceful walks and secret gardens">💎 Hidden Gems</button>
+              <button class="prompt-pill" data-prompt="Best neighborhood boutique hotels and ryokans">🏨 Top Accommodations</button>
+            </div>
+
+            <!-- Custom AI Input -->
+            <div class="ai-input-row">
+              <input type="text" id="ai-custom-prompt" placeholder="Ask AI: e.g. 'Plan an afternoon walking tour with coffee stops'" class="input-text">
+              <button id="btn-generate-ai" class="btn-primary">
+                <span id="ai-btn-text">Inspire Me</span>
+              </button>
+            </div>
+
+            <!-- AI Output Stream / Results -->
+            <div id="ai-results-container" class="ai-results-list">
+              <div class="ai-placeholder">
+                <p>💡 Click an idea above or ask anything to brainstorm places, restaurants, hotels, and sights with real-time web info.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Manual Planning Modules & Checklists -->
+        <div class="planning-manual-column">
+          <!-- Quick Add Manual Item -->
+          <div class="card add-item-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <span class="card-icon">➕</span>
+                <h2>Add to Itinerary</h2>
+              </div>
+            </div>
+            <form id="form-add-item" class="add-item-form">
+              <div class="form-row">
+                <div class="form-group flex-2">
+                  <label for="item-title">Title</label>
+                  <input type="text" id="item-title" placeholder="e.g. Flight NH 112, Hotel Kanra, Ramen Dinner" required>
+                </div>
+                <div class="form-group flex-1">
+                  <label for="item-category">Category</label>
+                  <select id="item-category">
+                    <option value="activity">🎯 Activity / Sight</option>
+                    <option value="food">🍽️ Food & Dining</option>
+                    <option value="hotel">🏨 Hotel & Stay</option>
+                    <option value="flight">✈️ Flight / Transit</option>
+                    <option value="note">📝 Note / Info</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="item-day">Day #</label>
+                  <input type="number" id="item-day" min="1" value="1" required>
+                </div>
+                <div class="form-group flex-1">
+                  <label for="item-timeblock">Time Block</label>
+                  <select id="item-timeblock">
+                    <option value="morning">Morning</option>
+                    <option value="afternoon">Afternoon</option>
+                    <option value="evening">Evening</option>
+                    <option value="night">Night</option>
+                  </select>
+                </div>
+                <div class="form-group flex-1">
+                  <label for="item-time">Approx Time</label>
+                  <input type="time" id="item-time" value="10:00">
+                </div>
+                <div class="form-group flex-1">
+                  <label for="item-cost">Est. Cost</label>
+                  <input type="number" id="item-cost" placeholder="0">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group flex-2">
+                  <label for="item-location">Location / Address</label>
+                  <input type="text" id="item-location" placeholder="e.g. Pontocho, Nakagyo Ward, Kyoto">
+                </div>
+                <div class="form-group flex-2">
+                  <label for="item-website">Website URL</label>
+                  <input type="url" id="item-website" placeholder="https://...">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="item-notes">Notes & Details</label>
+                <input type="text" id="item-notes" placeholder="e.g. Confirmation #849102, dress code, reservations required">
+              </div>
+              <button type="submit" class="btn-primary w-100">Add to Trip Itinerary</button>
+            </form>
+          </div>
+
+          <!-- Secondary Tabs: Packing Checklist & Budget Tracker -->
+          <div class="card tools-card">
+            <div class="tools-tab-header">
+              <button id="tab-packing-btn" class="tool-tab active">🧳 Packing Checklist</button>
+              <button id="tab-budget-btn" class="tool-tab">💰 Budget & Expenses</button>
+            </div>
+
+            <!-- Packing Checklist Panel -->
+            <div id="panel-packing" class="tool-panel active">
+              <div class="panel-header-actions">
+                <span id="packing-progress-label">0 of 0 items packed</span>
+                <button id="btn-auto-pack" class="btn-subtle" title="Use AI to generate tailored packing list">⚡ AI Packing Suggestions</button>
+              </div>
+              <div class="progress-bar-bg">
+                <div id="packing-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
+              </div>
+              <div class="add-pack-row">
+                <input type="text" id="pack-input-text" placeholder="Add custom item (e.g. Passport, adapters...)" class="input-text">
+                <select id="pack-input-category" class="select-category">
+                  <option value="Documents">Documents</option>
+                  <option value="Clothing">Clothing</option>
+                  <option value="Electronics">Electronics</option>
+                  <option value="Toiletries">Toiletries</option>
+                  <option value="Gear">Gear</option>
+                </select>
+                <button id="btn-add-pack" class="btn-secondary">Add</button>
+              </div>
+              <ul id="packing-list-items" class="checklist-items">
+                <!-- Dynamically rendered -->
+              </ul>
+            </div>
+
+            <!-- Budget & Expense Panel -->
+            <div id="panel-budget" class="tool-panel">
+              <div class="budget-summary-banner">
+                <div class="budget-stat">
+                  <span class="stat-label">Target Budget</span>
+                  <span class="stat-value" id="budget-target-val">$0</span>
+                </div>
+                <div class="budget-stat">
+                  <span class="stat-label">Total Logged</span>
+                  <span class="stat-value" id="budget-spent-val">$0</span>
+                </div>
+                <div class="budget-stat">
+                  <span class="stat-label">Remaining</span>
+                  <span class="stat-value" id="budget-remain-val">$0</span>
+                </div>
+              </div>
+              <div class="add-expense-row">
+                <input type="text" id="exp-input-title" placeholder="Expense description..." class="input-text flex-2">
+                <select id="exp-input-category" class="select-category flex-1">
+                  <option value="Flights">Flights</option>
+                  <option value="Hotels">Hotels</option>
+                  <option value="Food">Food</option>
+                  <option value="Activities">Activities</option>
+                  <option value="Transit">Transit</option>
+                  <option value="Other">Other</option>
+                </select>
+                <input type="number" id="exp-input-amount" placeholder="Amount" class="input-text flex-1">
+                <button id="btn-add-expense" class="btn-secondary">Log</button>
+              </div>
+              <ul id="expense-list-items" class="expense-items">
+                <!-- Dynamically rendered -->
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: VIEWING (EXECUTIVE ITINERARY & MAP) -->
+    <section id="section-viewing" class="tab-view">
+      <div class="viewing-layout">
+        <!-- Left: Interactive Timeline & Day Filters -->
+        <div class="viewing-timeline-column">
+          <!-- Day Filter Buttons -->
+          <div class="day-filter-bar" id="day-filter-bar">
+            <button class="day-filter-btn active" data-day="all">All Days</button>
+            <!-- Generated dynamically based on trip duration -->
+          </div>
+
+          <!-- Schedule Timeline Container -->
+          <div id="viewing-timeline-container" class="timeline-container">
+            <!-- Dynamically populated with day cards and one-click Google Maps links -->
+          </div>
+        </div>
+
+        <!-- Right: Interactive Leaflet Map & Trip Summary -->
+        <div class="viewing-map-column">
+          <div class="card map-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <span class="card-icon">📍</span>
+                <h2>Interactive Route & Sights Map</h2>
+              </div>
+              <span class="badge-map-info">OpenStreetMap</span>
+            </div>
+            <div id="trip-map" class="map-container"></div>
+          </div>
+
+          <!-- At-a-glance Trip Executive Stats -->
+          <div class="card summary-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <span class="card-icon">📊</span>
+                <h2>Trip Summary</h2>
+              </div>
+            </div>
+            <div class="summary-stats-grid">
+              <div class="summary-box">
+                <span class="summary-num" id="stat-total-stops">0</span>
+                <span class="summary-sub">Planned Stops</span>
+              </div>
+              <div class="summary-box">
+                <span class="summary-num" id="stat-total-food">0</span>
+                <span class="summary-sub">Dining Spots</span>
+              </div>
+              <div class="summary-box">
+                <span class="summary-num" id="stat-total-days">0</span>
+                <span class="summary-sub">Days Total</span>
+              </div>
+              <div class="summary-box">
+                <span class="summary-num" id="stat-budget-progress">0%</span>
+                <span class="summary-sub">Budget Committed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: NEW TRIP -->
+  <div id="modal-new-trip" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Create New Trip</h3>
+        <button class="modal-close" data-close="modal-new-trip">✕</button>
+      </div>
+      <form id="form-create-trip" class="modal-body">
+        <div class="form-group">
+          <label for="trip-destination">Destination *</label>
+          <input type="text" id="trip-destination" placeholder="e.g. Barcelona, Spain or Reykjavik, Iceland" required>
+        </div>
+        <div class="form-group">
+          <label for="trip-name">Trip Title (optional)</label>
+          <input type="text" id="trip-name" placeholder="e.g. Summer Mediterranean Getaway">
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="trip-start">Start Date</label>
+            <input type="date" id="trip-start">
+          </div>
+          <div class="form-group flex-1">
+            <label for="trip-end">End Date</label>
+            <input type="date" id="trip-end">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="trip-travelers">Travelers</label>
+            <input type="text" id="trip-travelers" placeholder="e.g. 2 Adults, 1 Child" value="2 Adults">
+          </div>
+          <div class="form-group flex-1">
+            <label for="trip-style">Style / Vibe</label>
+            <input type="text" id="trip-style" placeholder="e.g. Food & Wine, Relaxation, Adventure" value="Exploration & Culture">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="trip-budget">Target Budget</label>
+            <input type="number" id="trip-budget" placeholder="e.g. 3000" value="2500">
+          </div>
+          <div class="form-group flex-1">
+            <label for="trip-currency">Currency</label>
+            <select id="trip-currency">
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="JPY">JPY (¥)</option>
+              <option value="CAD">CAD ($)</option>
+              <option value="AUD">AUD ($)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="trip-notes-input">Notes & Ideas</label>
+          <textarea id="trip-notes-input" rows="2" placeholder="Must-try restaurants, flight constraints, passport requirements..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-subtle" data-close="modal-new-trip">Cancel</button>
+          <button type="submit" class="btn-primary">Create Trip</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SETTINGS (AI MODEL & API KEY SWITCHER) -->
+  <div id="modal-settings" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>AI & App Settings</h3>
+        <button class="modal-close" data-close="modal-settings">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>AI Intelligence Provider</label>
+          <div class="provider-radio-group">
+            <label class="radio-card">
+              <input type="radio" name="settings-provider" value="gemini" id="provider-gemini">
+              <div class="radio-content">
+                <strong>Google Gemini</strong>
+                <span>Direct Gemini 3.8 Flash API with web capabilities</span>
+              </div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="settings-provider" value="ollama" id="provider-ollama">
+              <div class="radio-content">
+                <strong>Local Ollama</strong>
+                <span>Runs privately on your Umbrel server or home network</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Gemini Specific Fields -->
+        <div id="settings-gemini-fields" class="provider-panel">
+          <div class="form-group">
+            <label for="settings-gemini-key">Gemini API Key</label>
+            <input type="password" id="settings-gemini-key" placeholder="Enter your Google Gemini API key">
+            <small class="form-hint">Stored locally on your server. Get one for free at aistudio.google.com</small>
+          </div>
+          <div class="form-group">
+            <label for="settings-gemini-model">Gemini Model</label>
+            <input type="text" id="settings-gemini-model" value="gemini-3.8-flash">
+            <small class="form-hint">Default: gemini-3.8-flash (auto-falls back if needed)</small>
+          </div>
+        </div>
+
+        <!-- Ollama Specific Fields -->
+        <div id="settings-ollama-fields" class="provider-panel">
+          <div class="form-group">
+            <label for="settings-ollama-url">Ollama Host URL</label>
+            <input type="text" id="settings-ollama-url" value="http://umbrel.local:11434">
+            <small class="form-hint">Connects to Umbrel's Ollama or custom local server</small>
+          </div>
+          <div class="form-group">
+            <label for="settings-ollama-model">Ollama Model</label>
+            <input type="text" id="settings-ollama-model" value="llama3:latest">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="settings-web-search" checked>
+            <span>Enable real-time Web Search grounding (DuckDuckGo integration)</span>
+          </label>
+        </div>
+
+        <div id="test-connection-result" class="test-result-box" style="display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-test-ai-conn" class="btn-subtle">⚡ Test Connection</button>
+        <button type="button" id="btn-save-settings" class="btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SHARE & EXPORT -->
+  <div id="modal-share" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Share & Export Trip</h3>
+        <button class="modal-close" data-close="modal-share">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="share-intro">Share this trip with family, friends, or travel companions. Anyone with the link can view the itinerary on their phone without logging in.</p>
+        
+        <!-- Live Link Box -->
+        <div class="form-group">
+          <label>Public Read-Only Link</label>
+          <div class="copy-input-row">
+            <input type="text" id="share-link-input" readonly>
+            <button id="btn-copy-share-link" class="btn-secondary">Copy</button>
+          </div>
+          <small class="form-hint">Works on any browser. No login required.</small>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Export Options -->
+        <div class="export-options-grid">
+          <a id="btn-export-html" class="export-card" download>
+            <span class="export-icon">📄</span>
+            <div>
+              <strong>Standalone Offline Guide</strong>
+              <span>Download an interactive self-contained HTML file (works completely offline)</span>
+            </div>
+          </a>
+          <a id="btn-export-ics" class="export-card" download>
+            <span class="export-icon">📅</span>
+            <div>
+              <strong>Add to Calendar (.ics)</strong>
+              <span>Sync all scheduled activities and flights directly into Apple or Google Calendar</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: INLINE EDIT ITEM (FROM VIEWING OR PLANNING) -->
+  <div id="modal-edit-item" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Quick Edit Itinerary Item</h3>
+        <button class="modal-close" data-close="modal-edit-item">✕</button>
+      </div>
+      <form id="form-edit-item" class="modal-body">
+        <input type="hidden" id="edit-item-id">
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="edit-item-title">Title *</label>
+            <input type="text" id="edit-item-title" required>
+          </div>
+          <div class="form-group flex-1">
+            <label for="edit-item-category">Category</label>
+            <select id="edit-item-category">
+              <option value="activity">Activity</option>
+              <option value="food">Food & Dining</option>
+              <option value="hotel">Hotel</option>
+              <option value="flight">Flight</option>
+              <option value="note">Note</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="edit-item-day">Day #</label>
+            <input type="number" id="edit-item-day" min="1" required>
+          </div>
+          <div class="form-group flex-1">
+            <label for="edit-item-timeblock">Block</label>
+            <select id="edit-item-timeblock">
+              <option value="morning">Morning</option>
+              <option value="afternoon">Afternoon</option>
+              <option value="evening">Evening</option>
+              <option value="night">Night</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="edit-item-time">Time</label>
+            <input type="time" id="edit-item-time">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="edit-item-location">Location / Address</label>
+          <input type="text" id="edit-item-location">
+        </div>
+        <div class="form-group">
+          <label for="edit-item-website">Website URL</label>
+          <input type="url" id="edit-item-website">
+        </div>
+        <div class="form-group">
+          <label for="edit-item-notes">Notes & Details</label>
+          <textarea id="edit-item-notes" rows="2"></textarea>
+        </div>
+        <div class="modal-footer space-between">
+          <button type="button" id="btn-delete-item" class="btn-danger">Delete Item</button>
+          <div class="btn-group">
+            <button type="button" class="btn-subtle" data-close="modal-edit-item">Cancel</button>
+            <button type="submit" class="btn-primary">Save Changes</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="/app.js"></script>
+</body>
+</html>

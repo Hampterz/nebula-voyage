@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shared Itinerary · Voyage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: rgba(23, 31, 48, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #6366f1;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      background: var(--bg);
+      background-image: radial-gradient(at top center, rgba(99, 102, 241, 0.15), transparent 70%);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+      min-height: 100vh;
+    }
+    .container { max-width: 760px; margin: 0 auto; padding-bottom: 60px; }
+    
+    .nav-guest {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+    }
+    .read-badge {
+      font-size: 12px;
+      background: rgba(255,255,255,0.08);
+      padding: 4px 10px;
+      border-radius: 20px;
+      color: var(--text-muted);
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, rgba(30, 41, 64, 0.8), rgba(15, 23, 42, 0.9));
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(12px);
+    }
+    .hero-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .meta-tag {
+      font-size: 13px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 20px;
+      font-weight: 500;
+    }
+    .hero-notes {
+      font-size: 14px;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding-top: 12px;
+      margin-top: 12px;
+    }
+
+    .day-filter {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .day-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .day-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .timeline-group {
+      margin-bottom: 28px;
+    }
+    .day-header {
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: #a5b4fc;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+    }
+
+    .item-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      backdrop-filter: blur(10px);
+    }
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .item-title {
+      font-weight: 700;
+      font-size: 16px;
+      color: #fff;
+    }
+    .item-time {
+      font-size: 13px;
+      font-weight: 600;
+      color: #818cf8;
+    }
+    .item-loc {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .item-notes {
+      font-size: 13px;
+      color: #cbd5e1;
+      background: rgba(0,0,0,0.25);
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-top: 4px;
+    }
+    .btn-maps {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      align-self: flex-start;
+      margin-top: 8px;
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: white;
+      text-decoration: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+    }
+
+    .footer-note {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="nav-guest">
+      <div class="brand">
+        <span>🧭</span>
+        <span>Voyage</span>
+      </div>
+      <span class="read-badge">Shared Itinerary View</span>
+    </div>
+
+    <div class="hero-card" id="guest-hero">
+      <div class="hero-meta" id="guest-meta">
+        <span class="meta-tag" id="meta-dest">📍 Loading...</span>
+      </div>
+      <h1 class="hero-title" id="guest-title">Shared Travel Plan</h1>
+      <p class="hero-notes" id="guest-notes"></p>
+    </div>
+
+    <div class="day-filter" id="guest-day-filter"></div>
+
+    <div id="guest-timeline">
+      <p style="text-align:center; padding:32px; color:var(--text-muted);">Loading itinerary details...</p>
+    </div>
+
+    <div class="footer-note">
+      Organized & shared with Voyage · Travel Planner
+    </div>
+  </div>
+
+  <script>
+    const token = window.location.pathname.split('/').pop();
+    let tripData = null;
+    let selectedDay = 'all';
+
+    async function loadSharedTrip() {
+      try {
+        const res = await fetch(`/api/share/${token}`);
+        if (!res.ok) throw new Error('Shared trip not found or expired');
+        tripData = await res.json();
+        renderSharedHero();
+        renderDayButtons();
+        renderTimeline();
+      } catch (err) {
+        document.getElementById('guest-timeline').innerHTML = `
+          <div style="text-align:center; padding:48px; color:#fb7185;">
+            <h3>Trip Not Found</h3>
+            <p style="font-size:14px; margin-top:8px; color:var(--text-muted);">This shared link may have expired or is invalid.</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderSharedHero() {
+      document.title = `${tripData.title || tripData.destination} · Voyage Itinerary`;
+      document.getElementById('guest-title').textContent = tripData.title || tripData.destination;
+      document.getElementById('meta-dest').textContent = `📍 ${tripData.destination}`;
+      
+      const metaBox = document.getElementById('guest-meta');
+      if (tripData.startDate) {
+        const dateTag = document.createElement('span');
+        dateTag.className = 'meta-tag';
+        dateTag.textContent = `📅 ${tripData.startDate} to ${tripData.endDate || 'TBD'}`;
+        metaBox.appendChild(dateTag);
+      }
+      if (tripData.travelers) {
+        const travTag = document.createElement('span');
+        travTag.className = 'meta-tag';
+        travTag.textContent = `👥 ${tripData.travelers}`;
+        metaBox.appendChild(travTag);
+      }
+      if (tripData.travelStyle) {
+        const styleTag = document.createElement('span');
+        styleTag.className = 'meta-tag';
+        styleTag.textContent = `🏷️ ${tripData.travelStyle}`;
+        metaBox.appendChild(styleTag);
+      }
+
+      document.getElementById('guest-notes').textContent = tripData.notes || 'Enjoy the journey!';
+    }
+
+    function renderDayButtons() {
+      const container = document.getElementById('guest-day-filter');
+      container.innerHTML = '<button class="day-btn active" data-day="all">All Days</button>';
+
+      const days = [...new Set((tripData.items || []).map(i => Number(i.day) || 1))].sort((a,b) => a - b);
+      days.forEach(d => {
+        const btn = document.createElement('button');
+        btn.className = 'day-btn';
+        btn.dataset.day = d;
+        btn.textContent = `Day ${d}`;
+        container.appendChild(btn);
+      });
+
+      container.querySelectorAll('.day-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          container.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          selectedDay = btn.dataset.day;
+          renderTimeline();
+        });
+      });
+    }
+
+    function renderTimeline() {
+      const container = document.getElementById('guest-timeline');
+      container.innerHTML = '';
+
+      let items = tripData.items || [];
+      if (selectedDay !== 'all') {
+        items = items.filter(i => String(i.day) === String(selectedDay));
+      }
+
+      if (items.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding:32px; color:var(--text-muted);">No items planned for this day.</p>';
+        return;
+      }
+
+      const daysMap = {};
+      items.forEach(i => {
+        const d = i.day || 1;
+        if (!daysMap[d]) daysMap[d] = [];
+        daysMap[d].push(i);
+      });
+
+      Object.keys(daysMap).sort((a,b) => Number(a) - Number(b)).forEach(day => {
+        const group = document.createElement('div');
+        group.className = 'timeline-group';
+
+        group.innerHTML = `<div class="day-header">Day ${day}</div>`;
+
+        daysMap[day].sort((a,b) => (a.time || '10:00').localeCompare(b.time || '10:00')).forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+
+          const gmapsUrl = item.mapUrl || (item.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}` : '');
+
+          card.innerHTML = `
+            <div class="item-top">
+              <span class="item-title">${escapeHtml(item.title)}</span>
+              <span class="item-time">${item.time || ''} (${item.timeBlock || 'Day'})</span>
+            </div>
+            ${item.location ? `<div class="item-loc">📍 ${escapeHtml(item.location)}</div>` : ''}
+            ${item.notes ? `<div class="item-notes">${escapeHtml(item.notes)}</div>` : ''}
+            ${gmapsUrl ? `<a href="${gmapsUrl}" target="_blank" rel="noopener" class="btn-maps">📍 Open in Google Maps ↗</a>` : ''}
+          `;
+
+          group.appendChild(card);
+        });
+
+        container.appendChild(group);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    loadSharedTrip();
+  </script>
+</body>
+</html>

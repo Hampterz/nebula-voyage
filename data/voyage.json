@@ -1,0 +1,143 @@
+{
+  "settings": {
+    "aiProvider": "gemini",
+    "geminiApiKey": "",
+    "geminiModel": "gemini-3.8-flash",
+    "ollamaUrl": "http://umbrel.local:11434",
+    "ollamaModel": "llama3:latest",
+    "enableWebSearch": true
+  },
+  "trips": [
+    {
+      "id": "trip_eddddd2e",
+      "title": "Kyoto Cultural & Culinary Journey",
+      "destination": "Kyoto, Japan",
+      "startDate": "2026-11-10",
+      "endDate": "2026-11-15",
+      "travelers": "2 Adults",
+      "travelStyle": "Culture, Food & Relaxation",
+      "targetBudget": 3500,
+      "currency": "USD",
+      "notes": "JR Rail Pass activated. Pocket WiFi reserved at KIX airport.",
+      "shareToken": "ecc90291a3c3019a69960da36149c58c",
+      "createdAt": "2026-10-08T04:16:38.582Z",
+      "items": [
+        {
+          "id": "item_1",
+          "day": 1,
+          "timeBlock": "morning",
+          "time": "09:30",
+          "category": "flight",
+          "title": "Arrive at Kansai International Airport (KIX)",
+          "location": "Kansai International Airport, Osaka",
+          "mapUrl": "https://www.google.com/maps/search/?api=1&query=Kansai+International+Airport",
+          "websiteUrl": "https://www.kansai-airport.or.jp/en/",
+          "cost": 950,
+          "notes": "Take Haruka Express direct to Kyoto Station."
+        },
+        {
+          "id": "item_2",
+          "day": 1,
+          "timeBlock": "afternoon",
+          "time": "14:00",
+          "category": "hotel",
+          "title": "Check-in: Hotel Kanra Kyoto",
+          "location": "190 Kitamachi, Shimogyo Ward, Kyoto",
+          "mapUrl": "https://www.google.com/maps/search/?api=1&query=Hotel+Kanra+Kyoto",
+          "websiteUrl": "https://www.hotelkanra.jp/en/",
+          "cost": 1100,
+          "notes": "Traditional machiya style luxury rooms with wooden cypress tub."
+        },
+        {
+          "id": "item_3",
+          "day": 1,
+          "timeBlock": "evening",
+          "time": "18:30",
+          "category": "food",
+          "title": "Dinner at Pontocho Alley Kaiseki",
+          "location": "Pontocho Alley, Nakagyo Ward, Kyoto",
+          "mapUrl": "https://www.google.com/maps/search/?api=1&query=Pontocho+Alley+Kyoto",
+          "websiteUrl": "",
+          "cost": 140,
+          "notes": "Riverside dining overlooking Kamogawa River."
+        },
+        {
+          "id": "item_4",
+          "day": 2,
+          "timeBlock": "morning",
+          "time": "07:30",
+          "category": "activity",
+          "title": "Fushimi Inari Taisha Thousand Torii Gates",
+          "location": "68 Fukakusa Yabunouchicho, Fushimi Ward, Kyoto",
+          "mapUrl": "https://www.google.com/maps/search/?api=1&query=Fushimi+Inari+Taisha",
+          "websiteUrl": "http://inari.jp/en/",
+          "cost": 0,
+          "notes": "Arrive before 8am to experience peaceful mountain paths."
+        },
+        {
+          "id": "item_5",
+          "day": 2,
+          "timeBlock": "afternoon",
+          "time": "13:00",
+          "category": "food",
+          "title": "Nishiki Market Street Food Tour",
+          "location": "Nishikikoji-dori, Nakagyo Ward, Kyoto",
+          "mapUrl": "https://www.google.com/maps/search/?api=1&query=Nishiki+Market+Kyoto",
+          "websiteUrl": "",
+          "cost": 45,
+          "notes": "Try tako tamago (baby octopus), matcha warabi mochi, and fresh dashi omelettes."
+        }
+      ],
+      "packingList": [
+        {
+          "id": "pack_1",
+          "category": "Documents",
+          "text": "Passport & International Drivers Permit",
+          "checked": true
+        },
+        {
+          "id": "pack_2",
+          "category": "Documents",
+          "text": "JR Rail Pass Exchange Voucher",
+          "checked": true
+        },
+        {
+          "id": "pack_3",
+          "category": "Electronics",
+          "text": "Japan Type A Power Adapter & Power Bank",
+          "checked": false
+        },
+        {
+          "id": "pack_4",
+          "category": "Clothing",
+          "text": "Slip-on comfortable walking shoes for temples",
+          "checked": false
+        },
+        {
+          "id": "pack_5",
+          "category": "Toiletries",
+          "text": "Sunscreen and travel medicine kit",
+          "checked": true
+        }
+      ],
+      "expenses": [
+        {
+          "id": "exp_1",
+          "title": "Roundtrip Flights",
+          "category": "Flights",
+          "amount": 1900,
+          "currency": "USD",
+          "paidBy": "Self"
+        },
+        {
+          "id": "exp_2",
+          "title": "Hotel Kanra Deposit",
+          "category": "Hotels",
+          "amount": 550,
+          "currency": "USD",
+          "paidBy": "Self"
+        }
+      ]
+    }
+  ]
+}

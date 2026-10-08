@@ -1,0 +1,14 @@
+{
+  "name": "nebula-voyage",
+  "version": "1.0.0",
+  "description": "All-in-one trip planner, itinerary viewer, and trip sharing for Umbrel",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}
